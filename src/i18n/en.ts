@@ -78,6 +78,22 @@ export const en = {
     completeProcurement: "Complete Procurement",
     noShow: "No Show",
   },
+  queue: {
+    todayTotal: "Today's Appointments",
+    nextFarmer: "Next Farmer",
+    noFarmersWaiting: "No farmers are waiting right now.",
+    searchPlaceholder: "Search by farmer name or token",
+    noResults: "No appointments match your search or filter.",
+    farmer: "Farmer",
+    position: "Position",
+    actions: "Actions",
+    call: "Call",
+    checkIn: "Check In",
+    cancel: "Cancel",
+    waitingForTurn: "Waiting for turn",
+    confirmCancel: "Cancel this appointment? This cannot be undone.",
+    confirmNoShow: "Mark this farmer as a no-show? This cannot be undone.",
+  },
 } as const;
 
 export type Translations = typeof en;
