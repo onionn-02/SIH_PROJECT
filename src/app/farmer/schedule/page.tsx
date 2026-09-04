@@ -1,14 +1,19 @@
-import { CalendarDays } from "lucide-react";
+"use client";
+
+import { AlertTriangle, CalendarDays } from "lucide-react";
 
 import { AppointmentCard } from "@/components/farmer/appointment-card";
 import { FarmerTabs } from "@/components/farmer/farmer-tabs";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
+import { Skeleton } from "@/components/ui/skeleton";
 import { en } from "@/i18n/en";
-import { getUpcomingAppointments } from "@/lib/demo/farmer-demo-data";
+import { useFarmerAppointments } from "@/hooks/use-farmer-appointments";
+import { getUpcomingAppointments } from "@/lib/appointments/derive";
 
 export default function FarmerSchedulePage() {
-  const appointments = getUpcomingAppointments();
+  const { appointments, loading, error } = useFarmerAppointments();
+  const upcoming = getUpcomingAppointments(appointments);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
@@ -18,11 +23,18 @@ export default function FarmerSchedulePage() {
         description="All of your scheduled and in-progress procurement appointments."
       />
 
-      {appointments.length === 0 ? (
+      {loading ? (
+        <div className="space-y-4">
+          <Skeleton className="h-40 w-full" />
+          <Skeleton className="h-40 w-full" />
+        </div>
+      ) : error ? (
+        <EmptyState icon={AlertTriangle} title="Couldn't load your schedule" description={error} />
+      ) : upcoming.length === 0 ? (
         <EmptyState icon={CalendarDays} title={en.farmer.noSchedule} />
       ) : (
         <div className="space-y-4">
-          {appointments.map((appointment) => (
+          {upcoming.map((appointment) => (
             <AppointmentCard key={appointment.id} appointment={appointment} />
           ))}
         </div>

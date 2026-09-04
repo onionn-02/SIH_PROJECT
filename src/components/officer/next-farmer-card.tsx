@@ -6,11 +6,12 @@ import { StatusBadge } from "@/components/farmer/status-badge";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { en } from "@/i18n/en";
 import { useOfficerQueue } from "@/lib/officer/queue-context";
 
 export function NextFarmerCard() {
-  const { nextWaiting, callNext } = useOfficerQueue();
+  const { nextWaiting, callNext, loading } = useOfficerQueue();
 
   return (
     <Card>
@@ -18,7 +19,9 @@ export function NextFarmerCard() {
         <CardTitle className="text-base">{en.queue.nextFarmer}</CardTitle>
       </CardHeader>
       <CardContent>
-        {nextWaiting ? (
+        {loading ? (
+          <Skeleton className="h-12 w-full" />
+        ) : nextWaiting ? (
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="font-semibold">{nextWaiting.farmerName}</p>

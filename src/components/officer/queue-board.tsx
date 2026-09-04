@@ -1,12 +1,13 @@
 "use client";
 
-import { Search } from "lucide-react";
+import { AlertTriangle, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { StatusBadge } from "@/components/farmer/status-badge";
 import { QueueActions } from "@/components/officer/queue-actions";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { en } from "@/i18n/en";
 import { cn } from "@/lib/utils";
 import { useOfficerQueue } from "@/lib/officer/queue-context";
@@ -22,7 +23,7 @@ const FILTERS: { key: FilterKey; label: string; statuses: AppointmentStatus[] | 
 ];
 
 export function QueueBoard() {
-  const { queue } = useOfficerQueue();
+  const { queue, loading, error } = useOfficerQueue();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterKey>("all");
 
@@ -39,6 +40,27 @@ export function QueueBoard() {
       return matchesFilter && matchesSearch;
     });
   }, [queue, search, filter]);
+
+  if (loading) {
+    return (
+      <div className="space-y-3">
+        <Skeleton className="h-9 w-full sm:max-w-xs" />
+        <Skeleton className="h-16 w-full" />
+        <Skeleton className="h-16 w-full" />
+        <Skeleton className="h-16 w-full" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <EmptyState
+        icon={AlertTriangle}
+        title="Couldn't load the queue"
+        description={error}
+      />
+    );
+  }
 
   return (
     <div className="space-y-4">

@@ -1,11 +1,12 @@
 "use client";
 
 import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { en } from "@/i18n/en";
 import { useOfficerQueue } from "@/lib/officer/queue-context";
 
 export function SummaryCards() {
-  const { summary } = useOfficerQueue();
+  const { summary, loading } = useOfficerQueue();
 
   const cards = [
     { label: en.queue.todayTotal, value: summary.total },
@@ -13,6 +14,16 @@ export function SummaryCards() {
     { label: en.officer.inProgress, value: summary.inProgress },
     { label: en.officer.completed, value: summary.completed },
   ];
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {cards.map((card) => (
+          <Skeleton key={card.label} className="h-[68px] w-full" />
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

@@ -1,16 +1,14 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useMemo } from "react";
 
-import {
-  INITIAL_TODAY_QUEUE,
-  withQueuePositions,
-  type QueueAppointment,
-} from "@/lib/demo/officer-demo-data";
-import { isValidStatusTransition } from "@/lib/validation/status-transitions";
-import type { AppointmentStatus } from "@/types/firestore";
+import { useAuth } from "@/lib/auth/auth-context";
+import { todayDateKey } from "@/lib/format/datetime";
+import { useCenterQueue } from "@/hooks/use-center-queue";
+import { transitionAppointmentStatus } from "@/services/appointments";
+import type { QueueEntry } from "@/services/appointments";
 
-export type QueueEntry = QueueAppointment & { queuePosition: number | null };
+export type { QueueEntry };
 
 interface QueueSummary {
   total: number;
@@ -23,6 +21,8 @@ interface QueueSummary {
 interface OfficerQueueContextValue {
   queue: QueueEntry[];
   summary: QueueSummary;
+  loading: boolean;
+  error: string | null;
   /** The single WAITING appointment at queue position 1, if any. */
   nextWaiting: QueueEntry | null;
   checkIn: (id: string) => void;
@@ -36,24 +36,25 @@ interface OfficerQueueContextValue {
 const OfficerQueueContext = createContext<OfficerQueueContextValue | null>(null);
 
 /**
- * Holds today's queue for the officer section (CLAUDE.md §5, §18) as
- * in-memory client state. This mirrors what Day 4 will replace with a live
- * Firestore appointments query — the transition rules and derived queue
- * positions are written so that swap only needs to change where the data
- * comes from, not how status changes are validated or displayed.
+ * Live view of today's queue at the signed-in officer's assigned center
+ * (CLAUDE.md §5, §18), backed by Firestore. Status changes go through
+ * transitionAppointmentStatus, which validates the transition, writes the
+ * audit trail and notifies the farmer in one transaction.
  */
 export function OfficerQueueProvider({ children }: { children: React.ReactNode }) {
-  const [appointments, setAppointments] = useState<QueueAppointment[]>(INITIAL_TODAY_QUEUE);
+  const { user, profile } = useAuth();
+  const dateKey = todayDateKey();
+  const { queue, loading, error } = useCenterQueue(profile?.assigned_center_id ?? null, dateKey);
 
-  const transition = useCallback((id: string, to: AppointmentStatus) => {
-    setAppointments((current) =>
-      current.map((appointment) => {
-        if (appointment.id !== id) return appointment;
-        if (!isValidStatusTransition(appointment.status, to)) return appointment;
-        return { ...appointment, status: to };
-      })
-    );
-  }, []);
+  const transition = useCallback(
+    (id: string, to: Parameters<typeof transitionAppointmentStatus>[1]) => {
+      if (!user) return;
+      transitionAppointmentStatus(id, to, user.uid).catch((err) => {
+        console.error("Status transition failed:", err);
+      });
+    },
+    [user]
+  );
 
   const checkIn = useCallback((id: string) => transition(id, "WAITING"), [transition]);
   const callNext = useCallback((id: string) => transition(id, "CALLED"), [transition]);
@@ -71,8 +72,6 @@ export function OfficerQueueProvider({ children }: { children: React.ReactNode }
     [transition]
   );
 
-  const queue = useMemo(() => withQueuePositions(appointments), [appointments]);
-
   const summary = useMemo<QueueSummary>(
     () => ({
       total: queue.length,
@@ -89,6 +88,8 @@ export function OfficerQueueProvider({ children }: { children: React.ReactNode }
     () => ({
       queue,
       summary,
+      loading,
+      error,
       nextWaiting,
       checkIn,
       callNext,
@@ -100,6 +101,8 @@ export function OfficerQueueProvider({ children }: { children: React.ReactNode }
     [
       queue,
       summary,
+      loading,
+      error,
       nextWaiting,
       checkIn,
       callNext,

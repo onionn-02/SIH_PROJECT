@@ -14,6 +14,8 @@ export interface Profile {
   phone: string;
   role: UserRole;
   preferred_language: "en" | "hi" | "mr";
+  /** Officers only — the single center they manage the queue for (CLAUDE.md §11). */
+  assigned_center_id: string | null;
   created_at: Timestamp;
   updated_at: Timestamp;
 }
@@ -67,12 +69,29 @@ export type AppointmentStatus =
 
 export type PaymentStatus = "PENDING" | "PAID" | "FAILED";
 
-/** appointments/{appointmentId} */
+/**
+ * appointments/{appointmentId}
+ *
+ * Firestore has no server-side joins, so `center_id`, `date`, `time_label`,
+ * `commodity`, `farmer_name` and `farmer_phone` are copied from the parent
+ * schedule/profile at booking time. This lets the officer queue query
+ * "today's appointments at my center" directly, and lets the UI render a
+ * farmer's name without every officer needing read access to every farmer's
+ * profile. `queue_position` is intentionally left unused — position is
+ * always derived client-side from WAITING order (CLAUDE.md §18) so it can
+ * never drift out of sync with the real queue.
+ */
 export interface Appointment {
   farmer_id: string;
+  farmer_name: string;
+  farmer_phone: string;
   schedule_id: string;
+  center_id: string;
+  commodity: string;
+  date: string; // "YYYY-MM-DD", copied from the schedule
   token_number: string;
   appointment_time: Timestamp;
+  time_label: string; // e.g. "10:30 AM"
   status: AppointmentStatus;
   queue_position: number | null;
   notes: string | null;
@@ -116,6 +135,7 @@ export interface AppNotification {
 /** status_history/{historyId} — audit trail for appointment status changes */
 export interface StatusHistoryEntry {
   appointment_id: string;
+  farmer_id: string;
   old_status: AppointmentStatus | null;
   new_status: AppointmentStatus;
   changed_by: string;

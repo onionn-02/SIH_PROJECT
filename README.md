@@ -47,13 +47,28 @@ src/
 
 ## Firebase setup
 
-1. Create a Firebase project with Firestore and Authentication enabled.
+1. Create a Firebase project with Firestore (Standard edition) and
+   Authentication (Email/Password provider) enabled.
 2. Copy the Web app config into `NEXT_PUBLIC_FIREBASE_*` in `.env.local`.
 3. Create a service account and copy its credentials into the
    `FIREBASE_ADMIN_*` server-only variables. **Never commit `.env.local`
    or service-account JSON.**
-4. Deploy `firestore.rules` (currently a deny-all stub — full rules land
-   Day 4).
+4. Paste the contents of `firestore.rules` into the Firestore "Rules" tab
+   in the Firebase Console and publish.
+5. Run `npm run seed` to create the demo accounts and demo data described
+   below.
+
+### Demo accounts (created by `npm run seed`)
+
+| Role    | Email                          | Password    |
+| ------- | ------------------------------- | ----------- |
+| Farmer  | farmer.demo@procurement.test   | Demo@1234   |
+| Officer | officer.demo@procurement.test  | Demo@1234   |
+| Admin   | admin.demo@procurement.test    | Demo@1234   |
+
+The seed script is safe to re-run — it overwrites the same fixed demo
+document IDs rather than duplicating data, so it also works as a "reset
+the demo" command.
 
 ## Data model
 
@@ -65,4 +80,4 @@ See `src/types/firestore.ts` for the Firestore collection schema
 ## Build status
 
 Following the 7-day plan in `CLAUDE.md` §23. Current checkpoint:
-`day-1-foundation`.
+`day-4-backend-auth`.

@@ -1,14 +1,114 @@
 rules_version = '2';
 
 /**
- * Day 1 stub — intent only. Full role-based enforcement (farmer owns own
- * data, officer scoped to assigned center, admin broad access) is
- * implemented on Day 4 once Firebase Authentication and profiles/roles
- * are live. Until then this denies all client access by default so no
- * data is exposed before rules are finished.
+ * Role-based access (CLAUDE.md §11, §12, §20).
+ * - Farmers can only read their own profile/appointments/records/notifications.
+ * - Officers are scoped to the single center on their profile
+ *   (`assigned_center_id`) and can only move an appointment's status along
+ *   the same transition graph enforced client-side in
+ *   src/lib/validation/status-transitions.ts.
+ * - Admins have broad access. The admin panel itself lands Day 5; these
+ *   rules are already written for it so nothing has to change when it does.
+ * - Center/schedule/appointment *creation* is server-only (Admin SDK / seed
+ *   script) until the Day 5 admin panel and Day-6+ booking flow exist —
+ *   the Admin SDK always bypasses these rules, so the seed script is
+ *   unaffected by the `isAdmin()` gates below.
  */
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function myProfile() {
+      return get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && myProfile().role == 'admin';
+    }
+
+    function isOfficerForCenter(centerId) {
+      return isSignedIn() && myProfile().role == 'officer' && myProfile().assigned_center_id == centerId;
+    }
+
+    function isValidStatusTransition(fromStatus, toStatus) {
+      return
+        (fromStatus == 'SCHEDULED' && toStatus in ['WAITING', 'CANCELLED']) ||
+        (fromStatus == 'WAITING' && toStatus in ['CALLED', 'NO_SHOW', 'CANCELLED']) ||
+        (fromStatus == 'CALLED' && toStatus in ['IN_PROGRESS', 'NO_SHOW', 'CANCELLED']) ||
+        (fromStatus == 'IN_PROGRESS' && toStatus in ['COMPLETED', 'CANCELLED']);
+    }
+
+    match /profiles/{uid} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow create: if false;
+      allow update: if isSignedIn() && request.auth.uid == uid
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.assigned_center_id == resource.data.assigned_center_id;
+      allow delete: if false;
+    }
+
+    match /procurement_centers/{centerId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /procurement_schedules/{scheduleId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /appointments/{appointmentId} {
+      allow read: if isSignedIn() && (
+        resource.data.farmer_id == request.auth.uid ||
+        isOfficerForCenter(resource.data.center_id) ||
+        isAdmin()
+      );
+      allow create: if isAdmin();
+      allow update: if isAdmin() || (
+        isOfficerForCenter(resource.data.center_id) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updated_at']) &&
+        isValidStatusTransition(resource.data.status, request.resource.data.status)
+      );
+      allow delete: if false;
+    }
+
+    match /status_history/{id} {
+      allow read: if isSignedIn() && (
+        isAdmin() ||
+        resource.data.farmer_id == request.auth.uid ||
+        isOfficerForCenter(get(/databases/$(database)/documents/appointments/$(resource.data.appointment_id)).data.center_id)
+      );
+      allow create: if isAdmin() ||
+        isOfficerForCenter(get(/databases/$(database)/documents/appointments/$(request.resource.data.appointment_id)).data.center_id);
+      allow update, delete: if false;
+    }
+
+    match /procurement_records/{id} {
+      allow read: if isSignedIn() && (
+        resource.data.farmer_id == request.auth.uid ||
+        isOfficerForCenter(resource.data.center_id) ||
+        isAdmin()
+      );
+      allow create: if isAdmin() || isOfficerForCenter(request.resource.data.center_id);
+      allow update, delete: if false;
+    }
+
+    match /notifications/{id} {
+      allow read: if isSignedIn() && resource.data.user_id == request.auth.uid;
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && resource.data.user_id == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read_at']);
+      allow delete: if false;
+    }
+
+    match /payments/{id} {
+      allow read: if isSignedIn() && (resource.data.farmer_id == request.auth.uid || isAdmin());
+      allow write: if isAdmin();
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
