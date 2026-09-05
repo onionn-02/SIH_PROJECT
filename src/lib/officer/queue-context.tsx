@@ -28,6 +28,8 @@ interface OfficerQueueContextValue {
   dismissActionError: () => void;
   /** The single WAITING appointment at queue position 1, if any. */
   nextWaiting: QueueEntry | null;
+  /** True while a status-change request for this appointment is in flight. */
+  isPending: (id: string) => boolean;
   checkIn: (id: string) => void;
   callNext: (id: string) => void;
   startProcurement: (id: string) => void;
@@ -50,20 +52,39 @@ export function OfficerQueueProvider({ children }: { children: React.ReactNode }
   const { queue, loading, error } = useCenterQueue(profile?.assigned_center_id ?? null, dateKey);
   const [actionError, setActionError] = useState<string | null>(null);
   const dismissActionError = useCallback(() => setActionError(null), []);
+  const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
 
+  /**
+   * Tracked per-appointment so an action button can disable itself the
+   * instant it's clicked — the live queue snapshot that would otherwise
+   * remove/replace the button can lag a click by a few hundred ms, long
+   * enough for a fast double-click to fire the same transition twice (the
+   * second call then hits an already-moved appointment and throws).
+   */
   const transition = useCallback(
     (id: string, to: Parameters<typeof transitionAppointmentStatus>[1]) => {
-      if (!user) return;
+      if (!user || pendingIds.has(id)) return;
       setActionError(null);
-      transitionAppointmentStatus(id, to, user.uid).catch((err) => {
-        console.error("Status transition failed:", err);
-        setActionError(
-          err instanceof Error ? err.message : "Could not update this appointment right now."
-        );
-      });
+      setPendingIds((prev) => new Set(prev).add(id));
+      transitionAppointmentStatus(id, to, user.uid)
+        .catch((err) => {
+          console.error("Status transition failed:", err);
+          setActionError(
+            err instanceof Error ? err.message : "Could not update this appointment right now."
+          );
+        })
+        .finally(() => {
+          setPendingIds((prev) => {
+            const next = new Set(prev);
+            next.delete(id);
+            return next;
+          });
+        });
     },
-    [user]
+    [user, pendingIds]
   );
+
+  const isPending = useCallback((id: string) => pendingIds.has(id), [pendingIds]);
 
   const checkIn = useCallback((id: string) => transition(id, "WAITING"), [transition]);
   const callNext = useCallback((id: string) => transition(id, "CALLED"), [transition]);
@@ -102,6 +123,7 @@ export function OfficerQueueProvider({ children }: { children: React.ReactNode }
       actionError,
       dismissActionError,
       nextWaiting,
+      isPending,
       checkIn,
       callNext,
       startProcurement,
@@ -117,6 +139,7 @@ export function OfficerQueueProvider({ children }: { children: React.ReactNode }
       actionError,
       dismissActionError,
       nextWaiting,
+      isPending,
       checkIn,
       callNext,
       startProcurement,

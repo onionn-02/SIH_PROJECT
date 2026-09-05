@@ -12,19 +12,21 @@ import { useOfficerQueue, type QueueEntry } from "@/lib/officer/queue-context";
  * because the button for it simply doesn't exist.
  */
 export function QueueActions({ appointment }: { appointment: QueueEntry }) {
-  const { checkIn, callNext, startProcurement, completeProcurement, markNoShow, cancelAppointment } =
+  const { checkIn, callNext, startProcurement, completeProcurement, markNoShow, cancelAppointment, isPending } =
     useOfficerQueue();
+  const pending = isPending(appointment.id);
 
   switch (appointment.status) {
     case "SCHEDULED":
       return (
         <div className="flex flex-wrap gap-2">
-          <Button size="sm" variant="outline" onClick={() => checkIn(appointment.id)}>
+          <Button size="sm" variant="outline" disabled={pending} onClick={() => checkIn(appointment.id)}>
             {en.queue.checkIn}
           </Button>
           <Button
             size="sm"
             variant="ghost"
+            disabled={pending}
             onClick={() => {
               if (window.confirm(en.queue.confirmCancel)) cancelAppointment(appointment.id);
             }}
@@ -39,7 +41,7 @@ export function QueueActions({ appointment }: { appointment: QueueEntry }) {
       return (
         <div className="flex flex-wrap items-center gap-2">
           {appointment.queuePosition === 1 ? (
-            <Button size="sm" onClick={() => callNext(appointment.id)}>
+            <Button size="sm" disabled={pending} onClick={() => callNext(appointment.id)}>
               <PhoneCall className="size-4" aria-hidden="true" />
               {en.queue.call}
             </Button>
@@ -49,6 +51,7 @@ export function QueueActions({ appointment }: { appointment: QueueEntry }) {
           <Button
             size="sm"
             variant="ghost"
+            disabled={pending}
             onClick={() => {
               if (window.confirm(en.queue.confirmNoShow)) markNoShow(appointment.id);
             }}
@@ -62,13 +65,14 @@ export function QueueActions({ appointment }: { appointment: QueueEntry }) {
     case "CALLED":
       return (
         <div className="flex flex-wrap gap-2">
-          <Button size="sm" onClick={() => startProcurement(appointment.id)}>
+          <Button size="sm" disabled={pending} onClick={() => startProcurement(appointment.id)}>
             <PlayCircle className="size-4" aria-hidden="true" />
             {en.officer.startProcurement}
           </Button>
           <Button
             size="sm"
             variant="ghost"
+            disabled={pending}
             onClick={() => {
               if (window.confirm(en.queue.confirmNoShow)) markNoShow(appointment.id);
             }}
@@ -81,7 +85,7 @@ export function QueueActions({ appointment }: { appointment: QueueEntry }) {
 
     case "IN_PROGRESS":
       return (
-        <Button size="sm" onClick={() => completeProcurement(appointment.id)}>
+        <Button size="sm" disabled={pending} onClick={() => completeProcurement(appointment.id)}>
           <CheckCircle2 className="size-4" aria-hidden="true" />
           {en.officer.completeProcurement}
         </Button>

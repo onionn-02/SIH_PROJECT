@@ -11,7 +11,7 @@ import { en } from "@/i18n/en";
 import { useOfficerQueue } from "@/lib/officer/queue-context";
 
 export function NextFarmerCard() {
-  const { nextWaiting, callNext, loading, actionError, dismissActionError } = useOfficerQueue();
+  const { nextWaiting, callNext, loading, actionError, dismissActionError, isPending } = useOfficerQueue();
 
   return (
     <Card>
@@ -47,7 +47,7 @@ export function NextFarmerCard() {
             </div>
             <div className="flex items-center gap-3">
               <StatusBadge status={nextWaiting.status} />
-              <Button onClick={() => callNext(nextWaiting.id)}>
+              <Button disabled={isPending(nextWaiting.id)} onClick={() => callNext(nextWaiting.id)}>
                 <PhoneCall className="size-4" aria-hidden="true" />
                 {en.officer.callNext}
               </Button>
