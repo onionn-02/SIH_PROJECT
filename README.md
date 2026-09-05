@@ -80,4 +80,4 @@ See `src/types/firestore.ts` for the Firestore collection schema
 ## Build status
 
 Following the 7-day plan in `CLAUDE.md` §23. Current checkpoint:
-`day-4-backend-auth`.
+`day-7-demo-ready`.

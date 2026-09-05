@@ -98,7 +98,7 @@ service cloud.firestore {
 
     match /notifications/{id} {
       allow read: if isSignedIn() && resource.data.user_id == request.auth.uid;
-      allow create: if isSignedIn();
+      allow create: if isAdmin() || (isSignedIn() && myProfile().role == 'officer');
       allow update: if isSignedIn() && resource.data.user_id == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read_at']);
       allow delete: if false;
