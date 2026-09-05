@@ -3,6 +3,7 @@
 import { AlertTriangle, CalendarDays } from "lucide-react";
 
 import { AppointmentCard } from "@/components/farmer/appointment-card";
+import { AvailableSchedules } from "@/components/farmer/available-schedules";
 import { FarmerTabs } from "@/components/farmer/farmer-tabs";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
@@ -47,6 +48,10 @@ export default function FarmerSchedulePage() {
           ))}
         </div>
       )}
+
+      <div className="mt-10 border-t pt-8">
+        <AvailableSchedules />
+      </div>
     </div>
   );
 }

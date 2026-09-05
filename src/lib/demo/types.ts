@@ -84,6 +84,26 @@ export interface AdminSchedule {
   endTime: string;
   commodity: string;
   capacity: number;
+  bookedCount: number;
   status: ScheduleStatus;
   notes: string | null;
+}
+
+/**
+ * Farmer-facing view model for a schedule open to self-booking
+ * (CLAUDE.md §5 booking step, Day 7). Only published, non-full,
+ * today-or-later schedules are surfaced this way.
+ */
+export interface BookableSchedule {
+  id: string;
+  centerId: string;
+  centerName: string;
+  date: string;
+  dateLabel: string;
+  startTime: string;
+  endTime: string;
+  commodity: string;
+  capacity: number;
+  bookedCount: number;
+  slotsRemaining: number;
 }

@@ -9,10 +9,13 @@ rules_version = '2';
  *   src/lib/validation/status-transitions.ts.
  * - Admins have broad access. The admin panel itself lands Day 5; these
  *   rules are already written for it so nothing has to change when it does.
- * - Center/schedule/appointment *creation* is server-only (Admin SDK / seed
- *   script) until the Day 5 admin panel and Day-6+ booking flow exist —
- *   the Admin SDK always bypasses these rules, so the seed script is
- *   unaffected by the `isAdmin()` gates below.
+ * - Center/schedule *creation* is admin/server-only. A farmer may
+ *   self-book: create their own `appointments` doc (status SCHEDULED,
+ *   against a published schedule), bump that schedule's `booked_count` by
+ *   exactly 1 without exceeding capacity, and write the matching initial
+ *   `status_history` entry + their own booking-confirmation notification —
+ *   see src/services/booking.ts, which performs all of this atomically in
+ *   one transaction.
  */
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -41,6 +44,15 @@ service cloud.firestore {
         (fromStatus == 'IN_PROGRESS' && toStatus in ['COMPLETED', 'CANCELLED']);
     }
 
+    function scheduleOf(scheduleId) {
+      return get(/databases/$(database)/documents/procurement_schedules/$(scheduleId)).data;
+    }
+
+    /** Older schedule docs (seeded/admin-created before this field existed) count as 0 booked. */
+    function bookedCountOf(scheduleData) {
+      return ('booked_count' in scheduleData) ? scheduleData.booked_count : 0;
+    }
+
     match /profiles/{uid} {
       allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
       allow create: if false;
@@ -58,6 +70,13 @@ service cloud.firestore {
     match /procurement_schedules/{scheduleId} {
       allow read: if isSignedIn();
       allow write: if isAdmin();
+      // A farmer booking a slot bumps booked_count by exactly 1, never past
+      // capacity, and touches no other field (src/services/booking.ts).
+      allow update: if isSignedIn()
+        && resource.data.status == 'published'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['booked_count', 'updated_at'])
+        && request.resource.data.booked_count == bookedCountOf(resource.data) + 1
+        && request.resource.data.booked_count <= resource.data.capacity;
     }
 
     match /appointments/{appointmentId} {
@@ -66,7 +85,16 @@ service cloud.firestore {
         isOfficerForCenter(resource.data.center_id) ||
         isAdmin()
       );
-      allow create: if isAdmin();
+      // A farmer may only create an appointment for themselves, starting
+      // SCHEDULED, against a schedule that is actually published and whose
+      // center_id matches what they're claiming.
+      allow create: if isAdmin() || (
+        isSignedIn() &&
+        request.resource.data.farmer_id == request.auth.uid &&
+        request.resource.data.status == 'SCHEDULED' &&
+        scheduleOf(request.resource.data.schedule_id).status == 'published' &&
+        scheduleOf(request.resource.data.schedule_id).center_id == request.resource.data.center_id
+      );
       allow update: if isAdmin() || (
         isOfficerForCenter(resource.data.center_id) &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updated_at']) &&
@@ -81,8 +109,15 @@ service cloud.firestore {
         resource.data.farmer_id == request.auth.uid ||
         isOfficerForCenter(get(/databases/$(database)/documents/appointments/$(resource.data.appointment_id)).data.center_id)
       );
+      // A farmer may self-write only the very first "booked" audit entry for
+      // their own appointment (src/services/booking.ts) — never any other
+      // transition, which must go through an officer/admin.
       allow create: if isAdmin() ||
-        isOfficerForCenter(get(/databases/$(database)/documents/appointments/$(request.resource.data.appointment_id)).data.center_id);
+        isOfficerForCenter(get(/databases/$(database)/documents/appointments/$(request.resource.data.appointment_id)).data.center_id) ||
+        (isSignedIn() &&
+          request.resource.data.farmer_id == request.auth.uid &&
+          request.resource.data.old_status == null &&
+          request.resource.data.new_status == 'SCHEDULED');
       allow update, delete: if false;
     }
 
@@ -98,7 +133,10 @@ service cloud.firestore {
 
     match /notifications/{id} {
       allow read: if isSignedIn() && resource.data.user_id == request.auth.uid;
-      allow create: if isAdmin() || (isSignedIn() && myProfile().role == 'officer');
+      // A farmer may create only a notification addressed to themselves —
+      // used for their own booking confirmation (src/services/booking.ts).
+      allow create: if isAdmin() || (isSignedIn() && myProfile().role == 'officer')
+        || (isSignedIn() && request.resource.data.user_id == request.auth.uid);
       allow update: if isSignedIn() && resource.data.user_id == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read_at']);
       allow delete: if false;

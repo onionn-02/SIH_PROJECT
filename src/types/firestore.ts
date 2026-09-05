@@ -47,6 +47,8 @@ export interface ProcurementSchedule {
   end_time: string; // "HH:mm"
   commodity: string;
   capacity: number;
+  /** How many farmers have self-booked a slot on this schedule (CLAUDE.md §5 booking step). */
+  booked_count: number;
   status: ScheduleStatus;
   notes: string | null;
   created_at: Timestamp;

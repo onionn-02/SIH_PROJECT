@@ -100,8 +100,8 @@ export function ScheduleList() {
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      {schedule.dateLabel} · {schedule.startTime}–{schedule.endTime} · Capacity{" "}
-                      {schedule.capacity}
+                      {schedule.dateLabel} · {schedule.startTime}–{schedule.endTime} · Booked{" "}
+                      {schedule.bookedCount}/{schedule.capacity}
                     </p>
                     {schedule.notes ? (
                       <p className="text-xs text-muted-foreground">{schedule.notes}</p>

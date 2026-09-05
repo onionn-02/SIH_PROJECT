@@ -12,9 +12,9 @@ import {
 } from "firebase/firestore";
 
 import { db } from "@/lib/firebase/client";
-import { formatDateLabel } from "@/lib/format/datetime";
+import { formatDateLabel, todayDateKey } from "@/lib/format/datetime";
 import { getAllCenters } from "@/services/centers";
-import type { AdminSchedule } from "@/lib/demo/types";
+import type { AdminSchedule, BookableSchedule } from "@/lib/demo/types";
 import type { Appointment, AppointmentStatus, ProcurementSchedule, ScheduleStatus } from "@/types/firestore";
 
 /** Statuses a cancelled schedule's appointments can still be moved out of (CLAUDE.md §5). */
@@ -48,6 +48,7 @@ export function subscribeSchedules(
               endTime: data.end_time,
               commodity: data.commodity,
               capacity: data.capacity,
+              bookedCount: data.booked_count ?? 0,
               status: data.status,
               notes: data.notes,
             } satisfies AdminSchedule;
@@ -56,6 +57,53 @@ export function subscribeSchedules(
         onData(schedules);
       } catch (err) {
         onError(err instanceof Error ? err : new Error("Failed to load schedules."));
+      }
+    },
+    (err) => onError(err)
+  );
+}
+
+/**
+ * Live list of schedules a farmer can self-book: published, today or later,
+ * and not yet full (CLAUDE.md §5 booking step). Filtered/sorted client-side
+ * rather than with extra `where` clauses — same "no composite index for one
+ * cheap in-memory filter" convention as subscribeSchedules above.
+ */
+export function subscribeBookableSchedules(
+  onData: (schedules: BookableSchedule[]) => void,
+  onError: (error: Error) => void
+): () => void {
+  const q = query(collection(db, "procurement_schedules"), where("status", "==", "published"));
+  return onSnapshot(
+    q,
+    async (snapshot) => {
+      try {
+        const centers = await getAllCenters();
+        const centerNames = new Map(centers.map((c) => [c.id, c.name]));
+        const today = todayDateKey();
+        const schedules = snapshot.docs
+          .map((d) => {
+            const data = d.data() as ProcurementSchedule;
+            const bookedCount = data.booked_count ?? 0;
+            return {
+              id: d.id,
+              centerId: data.center_id,
+              centerName: centerNames.get(data.center_id) ?? "Unknown center",
+              date: data.date,
+              dateLabel: formatDateLabel(data.date),
+              startTime: data.start_time,
+              endTime: data.end_time,
+              commodity: data.commodity,
+              capacity: data.capacity,
+              bookedCount,
+              slotsRemaining: Math.max(0, data.capacity - bookedCount),
+            } satisfies BookableSchedule;
+          })
+          .filter((s) => s.date >= today && s.slotsRemaining > 0)
+          .sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime));
+        onData(schedules);
+      } catch (err) {
+        onError(err instanceof Error ? err : new Error("Failed to load available schedules."));
       }
     },
     (err) => onError(err)
@@ -81,6 +129,7 @@ export async function createSchedule(input: ScheduleInput): Promise<void> {
     end_time: input.endTime,
     commodity: input.commodity,
     capacity: input.capacity,
+    booked_count: 0,
     status: "draft" satisfies ScheduleStatus,
     notes: input.notes,
     created_at: now,
