@@ -8,16 +8,22 @@ import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/config/routes";
 import { en } from "@/i18n/en";
 import { useAuth } from "@/lib/auth/auth-context";
+import type { UserRole } from "@/types/firestore";
 
-const links = [
-  { href: ROUTES.farmer.dashboard, label: en.nav.farmerDashboard },
-  { href: ROUTES.officer.dashboard, label: en.nav.officerDashboard },
-  { href: ROUTES.about, label: en.nav.about },
-];
+const roleDashboardLink: Record<UserRole, { href: string; label: string }> = {
+  farmer: { href: ROUTES.farmer.dashboard, label: en.nav.farmerDashboard },
+  officer: { href: ROUTES.officer.dashboard, label: en.nav.officerDashboard },
+  admin: { href: ROUTES.admin.dashboard, label: en.nav.adminDashboard },
+};
 
 export function SiteNav() {
   const { user, profile, signOutUser } = useAuth();
   const router = useRouter();
+
+  const links = [
+    ...(profile ? [roleDashboardLink[profile.role]] : []),
+    { href: ROUTES.about, label: en.nav.about },
+  ];
 
   return (
     <header className="border-b bg-background">
@@ -40,7 +46,7 @@ export function SiteNav() {
                 size="sm"
                 onClick={async () => {
                   await signOutUser();
-                  router.push(ROUTES.login);
+                  router.push(ROUTES.home);
                 }}
               >
                 <LogOut className="size-4" aria-hidden="true" />

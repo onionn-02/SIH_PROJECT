@@ -12,20 +12,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ROUTES } from "@/config/routes";
 import { en } from "@/i18n/en";
-import { useCenterQueue } from "@/hooks/use-center-queue";
 import { useFarmerAppointments } from "@/hooks/use-farmer-appointments";
+import { useMyQueuePosition } from "@/hooks/use-my-queue-position";
 
 export default function ProcurementDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const { appointments, loading, error } = useFarmerAppointments();
   const appointment = appointments.find((a) => a.id === id) ?? null;
 
-  const { queue } = useCenterQueue(appointment?.center.id ?? null, appointment?.date ?? "");
-  const liveEntry = appointment ? queue.find((q) => q.id === appointment.id) : undefined;
-  const displayed =
-    appointment && liveEntry
-      ? { ...appointment, queuePosition: liveEntry.queuePosition, status: liveEntry.status }
-      : appointment;
+  const queuePosition = useMyQueuePosition(appointment?.id ?? null, appointment?.status);
+  const displayed = appointment ? { ...appointment, queuePosition } : appointment;
 
   if (loading) {
     return (

@@ -23,7 +23,7 @@ const FILTERS: { key: FilterKey; label: string; statuses: AppointmentStatus[] | 
 ];
 
 export function QueueBoard() {
-  const { queue, loading, error } = useOfficerQueue();
+  const { queue, loading, error, actionError, dismissActionError } = useOfficerQueue();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterKey>("all");
 
@@ -64,6 +64,21 @@ export function QueueBoard() {
 
   return (
     <div className="space-y-4">
+      {actionError ? (
+        <div
+          role="alert"
+          className="flex items-start justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+        >
+          <span>{actionError}</span>
+          <button
+            type="button"
+            onClick={dismissActionError}
+            className="shrink-0 font-medium underline underline-offset-2"
+          >
+            {en.queue.dismiss}
+          </button>
+        </div>
+      ) : null}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative w-full sm:max-w-xs">
           <Search

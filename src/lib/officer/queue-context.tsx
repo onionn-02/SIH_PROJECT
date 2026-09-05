@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo } from "react";
+import { createContext, useCallback, useContext, useMemo, useState } from "react";
 
 import { useAuth } from "@/lib/auth/auth-context";
 import { todayDateKey } from "@/lib/format/datetime";
@@ -23,6 +23,9 @@ interface OfficerQueueContextValue {
   summary: QueueSummary;
   loading: boolean;
   error: string | null;
+  /** Feedback from the most recent status-change action, if it failed. */
+  actionError: string | null;
+  dismissActionError: () => void;
   /** The single WAITING appointment at queue position 1, if any. */
   nextWaiting: QueueEntry | null;
   checkIn: (id: string) => void;
@@ -45,12 +48,18 @@ export function OfficerQueueProvider({ children }: { children: React.ReactNode }
   const { user, profile } = useAuth();
   const dateKey = todayDateKey();
   const { queue, loading, error } = useCenterQueue(profile?.assigned_center_id ?? null, dateKey);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const dismissActionError = useCallback(() => setActionError(null), []);
 
   const transition = useCallback(
     (id: string, to: Parameters<typeof transitionAppointmentStatus>[1]) => {
       if (!user) return;
+      setActionError(null);
       transitionAppointmentStatus(id, to, user.uid).catch((err) => {
         console.error("Status transition failed:", err);
+        setActionError(
+          err instanceof Error ? err.message : "Could not update this appointment right now."
+        );
       });
     },
     [user]
@@ -90,6 +99,8 @@ export function OfficerQueueProvider({ children }: { children: React.ReactNode }
       summary,
       loading,
       error,
+      actionError,
+      dismissActionError,
       nextWaiting,
       checkIn,
       callNext,
@@ -103,6 +114,8 @@ export function OfficerQueueProvider({ children }: { children: React.ReactNode }
       summary,
       loading,
       error,
+      actionError,
+      dismissActionError,
       nextWaiting,
       checkIn,
       callNext,

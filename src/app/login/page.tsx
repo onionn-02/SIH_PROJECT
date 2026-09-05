@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { FirebaseError } from "firebase/app";
-import { Sprout, Users } from "lucide-react";
+import { ShieldCheck, Sprout, Users } from "lucide-react";
 
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,19 @@ import { ROUTES } from "@/config/routes";
 import { en } from "@/i18n/en";
 import { useAuth } from "@/lib/auth/auth-context";
 import { DEMO_ACCOUNTS } from "@/lib/demo/demo-accounts";
+
+type DemoRole = "farmer" | "officer" | "admin";
+
+const DEMO_ROLES: DemoRole[] = ["farmer", "officer", "admin"];
+
+const DEMO_BUTTON: Record<
+  DemoRole,
+  { icon: typeof Sprout; iconClassName: string; label: string }
+> = {
+  farmer: { icon: Sprout, iconClassName: "text-emerald-600", label: en.login.fillFarmerDemo },
+  officer: { icon: Users, iconClassName: "text-blue-600", label: en.login.fillOfficerDemo },
+  admin: { icon: ShieldCheck, iconClassName: "text-slate-600", label: en.login.fillAdminDemo },
+};
 
 function friendlySignInError(error: unknown): string {
   if (error instanceof FirebaseError) {
@@ -30,12 +43,29 @@ function friendlySignInError(error: unknown): string {
 }
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="mx-auto max-w-sm px-4 py-16" />}>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, profile, loading, signIn } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [signInError, setSignInError] = useState<string | null>(null);
+  const [showAllDemoLogins, setShowAllDemoLogins] = useState(false);
+
+  const requestedRoleParam = searchParams.get("role");
+  const requestedRole =
+    requestedRoleParam && (DEMO_ROLES as string[]).includes(requestedRoleParam)
+      ? (requestedRoleParam as DemoRole)
+      : null;
+  const demoRolesToShow = requestedRole && !showAllDemoLogins ? [requestedRole] : DEMO_ROLES;
 
   const noProfileError = !loading && user && !profile ? en.login.noProfile : null;
   const error = signInError ?? noProfileError;
@@ -47,7 +77,9 @@ export default function LoginPage() {
         ? ROUTES.farmer.dashboard
         : profile.role === "officer"
           ? ROUTES.officer.dashboard
-          : ROUTES.home
+          : profile.role === "admin"
+            ? ROUTES.admin.dashboard
+            : ROUTES.home
     );
   }, [loading, user, profile, router]);
 
@@ -107,31 +139,35 @@ export default function LoginPage() {
         </CardContent>
       </Card>
 
-      <div className="mt-4 grid grid-cols-2 gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            setEmail(DEMO_ACCOUNTS.farmer.email);
-            setPassword(DEMO_ACCOUNTS.farmer.password);
-          }}
-        >
-          <Sprout className="size-4 text-emerald-600" aria-hidden="true" />
-          {en.login.fillFarmerDemo}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            setEmail(DEMO_ACCOUNTS.officer.email);
-            setPassword(DEMO_ACCOUNTS.officer.password);
-          }}
-        >
-          <Users className="size-4 text-blue-600" aria-hidden="true" />
-          {en.login.fillOfficerDemo}
-        </Button>
+      <div className="mt-4 flex flex-col gap-2">
+        {demoRolesToShow.map((role) => {
+          const { icon: Icon, iconClassName, label } = DEMO_BUTTON[role];
+          return (
+            <Button
+              key={role}
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full justify-start"
+              onClick={() => {
+                setEmail(DEMO_ACCOUNTS[role].email);
+                setPassword(DEMO_ACCOUNTS[role].password);
+              }}
+            >
+              <Icon className={`size-4 ${iconClassName}`} aria-hidden="true" />
+              {label}
+            </Button>
+          );
+        })}
+        {requestedRole && !showAllDemoLogins ? (
+          <button
+            type="button"
+            onClick={() => setShowAllDemoLogins(true)}
+            className="mt-1 text-left text-xs text-muted-foreground hover:text-foreground hover:underline"
+          >
+            {en.login.showOtherDemoLogins}
+          </button>
+        ) : null}
       </div>
     </div>
   );

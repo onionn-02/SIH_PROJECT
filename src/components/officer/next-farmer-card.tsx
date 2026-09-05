@@ -11,7 +11,7 @@ import { en } from "@/i18n/en";
 import { useOfficerQueue } from "@/lib/officer/queue-context";
 
 export function NextFarmerCard() {
-  const { nextWaiting, callNext, loading } = useOfficerQueue();
+  const { nextWaiting, callNext, loading, actionError, dismissActionError } = useOfficerQueue();
 
   return (
     <Card>
@@ -19,6 +19,21 @@ export function NextFarmerCard() {
         <CardTitle className="text-base">{en.queue.nextFarmer}</CardTitle>
       </CardHeader>
       <CardContent>
+        {actionError ? (
+          <div
+            role="alert"
+            className="mb-3 flex items-start justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+          >
+            <span>{actionError}</span>
+            <button
+              type="button"
+              onClick={dismissActionError}
+              className="shrink-0 font-medium underline underline-offset-2"
+            >
+              {en.queue.dismiss}
+            </button>
+          </div>
+        ) : null}
         {loading ? (
           <Skeleton className="h-12 w-full" />
         ) : nextWaiting ? (

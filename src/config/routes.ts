@@ -15,4 +15,10 @@ export const ROUTES = {
     dashboard: "/officer/dashboard",
     queue: "/officer/queue",
   },
+  admin: {
+    dashboard: "/admin/dashboard",
+    centers: "/admin/centers",
+    schedules: "/admin/schedules",
+    analytics: "/admin/analytics",
+  },
 } as const;

@@ -41,6 +41,31 @@ export async function getStatusHistory(appointmentId: string, farmerId: string):
   });
 }
 
+/**
+ * Raw WAITING/CALLED timestamps for one appointment (used to compute wait
+ * duration in services/admin.ts — `getStatusHistory` above returns display
+ * labels, not values usable for arithmetic).
+ */
+export async function getWaitAndCallTimestamps(
+  appointmentId: string,
+  farmerId: string
+): Promise<{ waitingAt: Date | null; calledAt: Date | null }> {
+  const snapshot = await getDocs(
+    query(
+      collection(db, "status_history"),
+      where("appointment_id", "==", appointmentId),
+      where("farmer_id", "==", farmerId)
+    )
+  );
+  const entries = snapshot.docs.map((d) => d.data() as StatusHistoryEntry);
+  const waiting = entries.find((e) => e.new_status === "WAITING");
+  const called = entries.find((e) => e.new_status === "CALLED");
+  return {
+    waitingAt: waiting?.created_at ? waiting.created_at.toDate() : null,
+    calledAt: called?.created_at ? called.created_at.toDate() : null,
+  };
+}
+
 export async function recordStatusChange(
   appointmentId: string,
   farmerId: string,

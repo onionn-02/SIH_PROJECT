@@ -8,6 +8,7 @@ import type {
   AppointmentStatus,
   NotificationType,
   PaymentStatus,
+  ScheduleStatus,
 } from "@/types/firestore";
 
 export interface DemoCenter {
@@ -52,4 +53,37 @@ export interface DemoNotification {
   type: NotificationType;
   createdAtLabel: string;
   read: boolean;
+}
+
+/**
+ * Admin-facing view model for a procurement center (CLAUDE.md §9, Day 5).
+ * Unlike `DemoCenter` (the farmer/officer-facing shape), this exposes the
+ * raw editable fields and the `active` flag the admin panel manages.
+ */
+export interface AdminCenter {
+  id: string;
+  name: string;
+  code: string;
+  address: string;
+  district: string;
+  state: string;
+  contactPhone: string;
+  operatingStart: string;
+  operatingEnd: string;
+  active: boolean;
+}
+
+/** Admin-facing view model for a procurement schedule (CLAUDE.md §9, Day 5). */
+export interface AdminSchedule {
+  id: string;
+  centerId: string;
+  centerName: string;
+  date: string;
+  dateLabel: string;
+  startTime: string;
+  endTime: string;
+  commodity: string;
+  capacity: number;
+  status: ScheduleStatus;
+  notes: string | null;
 }

@@ -27,11 +27,11 @@ export function RouteGuard({
   useEffect(() => {
     if (loading) return;
     if (!user || !profile) {
-      router.replace(ROUTES.login);
+      router.replace(ROUTES.home);
       return;
     }
     if (profile.role !== role) {
-      router.replace(ROUTES.login);
+      router.replace(ROUTES.home);
     }
   }, [loading, user, profile, role, router]);
 

@@ -81,3 +81,30 @@ export async function createNotification(
 export async function markNotificationRead(notificationId: string): Promise<void> {
   await updateDoc(doc(db, "notifications", notificationId), { read_at: serverTimestamp() });
 }
+
+/**
+ * Broadcasts a CENTER_ANNOUNCEMENT to every farmer who has an appointment
+ * at `centerId` (or every farmer, when `centerId` is null). Firestore has
+ * no fan-out write primitive, so one notification document is created per
+ * recipient — fine at this app's demo data volume (CLAUDE.md §32).
+ */
+export async function broadcastAnnouncement(
+  centerId: string | null,
+  title: string,
+  message: string
+): Promise<number> {
+  let farmerIds: string[];
+
+  if (centerId) {
+    const snapshot = await getDocs(
+      query(collection(db, "appointments"), where("center_id", "==", centerId))
+    );
+    farmerIds = Array.from(new Set(snapshot.docs.map((d) => d.data().farmer_id as string)));
+  } else {
+    const snapshot = await getDocs(query(collection(db, "profiles"), where("role", "==", "farmer")));
+    farmerIds = snapshot.docs.map((d) => d.id);
+  }
+
+  await Promise.all(farmerIds.map((farmerId) => createNotification(farmerId, title, message, "CENTER_ANNOUNCEMENT")));
+  return farmerIds.length;
+}

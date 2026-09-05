@@ -12,8 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ROUTES } from "@/config/routes";
 import { en } from "@/i18n/en";
-import { useCenterQueue } from "@/hooks/use-center-queue";
 import { useFarmerAppointments } from "@/hooks/use-farmer-appointments";
+import { useMyQueuePosition } from "@/hooks/use-my-queue-position";
 import { useNotifications } from "@/hooks/use-notifications";
 import { getPrimaryAppointment } from "@/lib/appointments/derive";
 import { useAuth } from "@/lib/auth/auth-context";
@@ -24,12 +24,8 @@ export default function FarmerDashboardPage() {
   const { notifications } = useNotifications();
 
   const appointment = getPrimaryAppointment(appointments);
-  const { queue } = useCenterQueue(appointment?.center.id ?? null, appointment?.date ?? "");
-  const liveEntry = appointment ? queue.find((q) => q.id === appointment.id) : undefined;
-  const displayedAppointment =
-    appointment && liveEntry
-      ? { ...appointment, queuePosition: liveEntry.queuePosition, status: liveEntry.status }
-      : appointment;
+  const queuePosition = useMyQueuePosition(appointment?.id ?? null, appointment?.status);
+  const displayedAppointment = appointment ? { ...appointment, queuePosition } : appointment;
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
