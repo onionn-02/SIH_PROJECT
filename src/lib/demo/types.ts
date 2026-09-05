@@ -9,6 +9,7 @@ import type {
   NotificationType,
   PaymentStatus,
   ScheduleStatus,
+  UserRole,
 } from "@/types/firestore";
 
 export interface DemoCenter {
@@ -87,6 +88,15 @@ export interface AdminSchedule {
   bookedCount: number;
   status: ScheduleStatus;
   notes: string | null;
+}
+
+/** Admin-facing view model for a user profile (CLAUDE.md §9 User Management, Day 7). */
+export interface AdminUser {
+  id: string;
+  fullName: string;
+  phone: string;
+  role: UserRole;
+  assignedCenterIds: string[];
 }
 
 /**

@@ -26,8 +26,8 @@ interface OfficerQueueContextValue {
   /** Feedback from the most recent status-change action, if it failed. */
   actionError: string | null;
   dismissActionError: () => void;
-  /** The single WAITING appointment at queue position 1, if any. */
-  nextWaiting: QueueEntry | null;
+  /** The WAITING appointment at queue position 1 for each of the officer's centers. */
+  nextWaitingByCenter: QueueEntry[];
   /** True while a status-change request for this appointment is in flight. */
   isPending: (id: string) => boolean;
   checkIn: (id: string) => void;
@@ -41,15 +41,16 @@ interface OfficerQueueContextValue {
 const OfficerQueueContext = createContext<OfficerQueueContextValue | null>(null);
 
 /**
- * Live view of today's queue at the signed-in officer's assigned center
- * (CLAUDE.md §5, §18), backed by Firestore. Status changes go through
- * transitionAppointmentStatus, which validates the transition, writes the
- * audit trail and notifies the farmer in one transaction.
+ * Live view of today's queue across the signed-in officer's assigned
+ * center(s) (CLAUDE.md §5, §11, §18), backed by Firestore. Status changes
+ * go through transitionAppointmentStatus, which validates the transition,
+ * writes the audit trail and notifies the farmer in one transaction.
  */
 export function OfficerQueueProvider({ children }: { children: React.ReactNode }) {
   const { user, profile } = useAuth();
   const dateKey = todayDateKey();
-  const { queue, loading, error } = useCenterQueue(profile?.assigned_center_id ?? null, dateKey);
+  const centerIds = profile?.assigned_center_ids ?? [];
+  const { queue, loading, error } = useCenterQueue(centerIds, dateKey);
   const [actionError, setActionError] = useState<string | null>(null);
   const dismissActionError = useCallback(() => setActionError(null), []);
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
@@ -112,7 +113,7 @@ export function OfficerQueueProvider({ children }: { children: React.ReactNode }
     [queue]
   );
 
-  const nextWaiting = useMemo(() => queue.find((a) => a.queuePosition === 1) ?? null, [queue]);
+  const nextWaitingByCenter = useMemo(() => queue.filter((a) => a.queuePosition === 1), [queue]);
 
   const value = useMemo<OfficerQueueContextValue>(
     () => ({
@@ -122,7 +123,7 @@ export function OfficerQueueProvider({ children }: { children: React.ReactNode }
       error,
       actionError,
       dismissActionError,
-      nextWaiting,
+      nextWaitingByCenter,
       isPending,
       checkIn,
       callNext,
@@ -138,7 +139,7 @@ export function OfficerQueueProvider({ children }: { children: React.ReactNode }
       error,
       actionError,
       dismissActionError,
-      nextWaiting,
+      nextWaitingByCenter,
       isPending,
       checkIn,
       callNext,

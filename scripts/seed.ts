@@ -275,7 +275,7 @@ async function main() {
     phone: "+91 90210 33445",
     role: "farmer",
     preferred_language: "en",
-    assigned_center_id: null,
+    assigned_center_ids: [],
     created_at: now,
     updated_at: now,
   });
@@ -284,7 +284,9 @@ async function main() {
     phone: "+91 90211 00110",
     role: "officer",
     preferred_language: "en",
-    assigned_center_id: NASHIK_ID,
+    // Manages both demo centers (CLAUDE.md §11 "center(s)") so the Day 7
+    // farmer self-booking flow at Pune shows up in the same officer's queue.
+    assigned_center_ids: [NASHIK_ID, PUNE_ID],
     created_at: now,
     updated_at: now,
   });
@@ -293,7 +295,7 @@ async function main() {
     phone: "+91 90211 00000",
     role: "admin",
     preferred_language: "en",
-    assigned_center_id: null,
+    assigned_center_ids: [],
     created_at: now,
     updated_at: now,
   });

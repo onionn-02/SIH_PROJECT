@@ -33,7 +33,7 @@ service cloud.firestore {
     }
 
     function isOfficerForCenter(centerId) {
-      return isSignedIn() && myProfile().role == 'officer' && myProfile().assigned_center_id == centerId;
+      return isSignedIn() && myProfile().role == 'officer' && centerId in myProfile().assigned_center_ids;
     }
 
     function isValidStatusTransition(fromStatus, toStatus) {
@@ -56,9 +56,14 @@ service cloud.firestore {
     match /profiles/{uid} {
       allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
       allow create: if false;
-      allow update: if isSignedIn() && request.auth.uid == uid
+      // Admin can update any profile (e.g. Admin -> Users assigning centers
+      // to an officer). A user updating their own profile may never change
+      // their own role or center assignment (self-escalation).
+      allow update: if isAdmin() || (
+        isSignedIn() && request.auth.uid == uid
         && request.resource.data.role == resource.data.role
-        && request.resource.data.assigned_center_id == resource.data.assigned_center_id;
+        && request.resource.data.assigned_center_ids == resource.data.assigned_center_ids
+      );
       allow delete: if false;
     }
 

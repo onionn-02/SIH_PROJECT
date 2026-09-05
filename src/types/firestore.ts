@@ -14,8 +14,8 @@ export interface Profile {
   phone: string;
   role: UserRole;
   preferred_language: "en" | "hi" | "mr";
-  /** Officers only — the single center they manage the queue for (CLAUDE.md §11). */
-  assigned_center_id: string | null;
+  /** Officers only — the center(s) they manage the queue for (CLAUDE.md §11). Empty for farmers/admins. */
+  assigned_center_ids: string[];
   created_at: Timestamp;
   updated_at: Timestamp;
 }

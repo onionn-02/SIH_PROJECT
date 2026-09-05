@@ -18,6 +18,7 @@ export const ROUTES = {
   },
   admin: {
     dashboard: "/admin/dashboard",
+    users: "/admin/users",
     centers: "/admin/centers",
     schedules: "/admin/schedules",
     analytics: "/admin/analytics",

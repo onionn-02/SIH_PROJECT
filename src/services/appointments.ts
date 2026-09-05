@@ -11,7 +11,7 @@ import {
 import { db } from "@/lib/firebase/client";
 import { formatDateLabel } from "@/lib/format/datetime";
 import { withQueuePositions } from "@/lib/queue/positions";
-import { getCenter } from "@/services/centers";
+import { getAllCenters, getCenter } from "@/services/centers";
 import { getRecordedQuantity } from "@/services/procurement-records";
 import { getStatusHistory } from "@/services/status-history";
 import { isValidStatusTransition } from "@/lib/validation/status-transitions";
@@ -27,6 +27,10 @@ export interface QueueEntry {
   timeSlot: string;
   status: AppointmentStatus;
   queuePosition: number | null;
+  centerId: string;
+  centerName: string;
+  /** Raw sort key — `timeSlot` is a formatted string and doesn't sort correctly across centers. */
+  appointmentTimeMillis: number;
 }
 
 const COMMODITY_INSTRUCTIONS: Record<string, string[]> = {
@@ -119,43 +123,83 @@ export function subscribeFarmerAppointments(
 }
 
 /**
- * Live queue for one center on one date, in appointment-time order.
- * Powers both the officer queue board and a farmer's own queue position.
+ * Live queue across one or more centers on one date, grouped by center then
+ * appointment time. An officer can be assigned multiple centers (CLAUDE.md
+ * §11 "center(s)"), so this runs one listener per center — queue position
+ * is inherently a per-location concept ("your place in line at *this*
+ * center"), so `withQueuePositions` is applied to each center's own WAITING
+ * subset before the results are merged, never across centers combined.
  *
- * `orderBy` is intentionally left off the query (it would require a
- * composite index alongside the two equality filters, for no real benefit
- * at this data volume) — the snapshot is sorted client-side instead.
+ * `orderBy` is intentionally left off each center's query (it would require
+ * a composite index alongside the two equality filters, for no real benefit
+ * at this data volume) — each center's snapshot is sorted client-side.
  */
 export function subscribeCenterQueue(
-  centerId: string,
+  centerIds: string[],
   dateKey: string,
   onData: (queue: QueueEntry[]) => void,
   onError: (error: Error) => void
 ): () => void {
-  const q = query(
-    collection(db, "appointments"),
-    where("center_id", "==", centerId),
-    where("date", "==", dateKey)
-  );
-  return onSnapshot(
-    q,
-    (snapshot) => {
-      const entries = snapshot.docs
-        .map((d) => ({ id: d.id, data: d.data() as Appointment }))
-        .sort((a, b) => a.data.appointment_time.toMillis() - b.data.appointment_time.toMillis())
-        .map(({ id, data }) => ({
-          id,
-          tokenNumber: data.token_number,
-          farmerName: data.farmer_name,
-          farmerPhone: data.farmer_phone,
-          commodity: data.commodity,
-          timeSlot: data.time_label,
-          status: data.status,
-        }));
-      onData(withQueuePositions(entries));
-    },
-    (err) => onError(err)
-  );
+  if (centerIds.length === 0) {
+    onData([]);
+    return () => {};
+  }
+
+  const perCenterQueues = new Map<string, QueueEntry[]>();
+  const unsubscribes: (() => void)[] = [];
+  let stopped = false;
+
+  function emit() {
+    const combined = centerIds
+      .flatMap((id) => perCenterQueues.get(id) ?? [])
+      .sort((a, b) => a.centerName.localeCompare(b.centerName) || a.appointmentTimeMillis - b.appointmentTimeMillis);
+    onData(combined);
+  }
+
+  getAllCenters()
+    .then((centers) => {
+      if (stopped) return;
+      const centerNames = new Map(centers.map((c) => [c.id, c.name]));
+
+      for (const centerId of centerIds) {
+        const q = query(
+          collection(db, "appointments"),
+          where("center_id", "==", centerId),
+          where("date", "==", dateKey)
+        );
+        unsubscribes.push(
+          onSnapshot(
+            q,
+            (snapshot) => {
+              const entries = snapshot.docs
+                .map((d) => ({ id: d.id, data: d.data() as Appointment }))
+                .sort((a, b) => a.data.appointment_time.toMillis() - b.data.appointment_time.toMillis())
+                .map(({ id, data }) => ({
+                  id,
+                  tokenNumber: data.token_number,
+                  farmerName: data.farmer_name,
+                  farmerPhone: data.farmer_phone,
+                  commodity: data.commodity,
+                  timeSlot: data.time_label,
+                  status: data.status,
+                  centerId,
+                  centerName: centerNames.get(centerId) ?? "Unknown center",
+                  appointmentTimeMillis: data.appointment_time.toMillis(),
+                }));
+              perCenterQueues.set(centerId, withQueuePositions(entries));
+              emit();
+            },
+            (err) => onError(err)
+          )
+        );
+      }
+    })
+    .catch((err) => onError(err instanceof Error ? err : new Error("Failed to load centers.")));
+
+  return () => {
+    stopped = true;
+    unsubscribes.forEach((unsub) => unsub());
+  };
 }
 
 interface NotificationCopy {

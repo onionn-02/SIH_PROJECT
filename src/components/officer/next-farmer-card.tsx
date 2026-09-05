@@ -11,7 +11,9 @@ import { en } from "@/i18n/en";
 import { useOfficerQueue } from "@/lib/officer/queue-context";
 
 export function NextFarmerCard() {
-  const { nextWaiting, callNext, loading, actionError, dismissActionError, isPending } = useOfficerQueue();
+  const { nextWaitingByCenter, callNext, loading, actionError, dismissActionError, isPending } =
+    useOfficerQueue();
+  const showCenterLabel = nextWaitingByCenter.length > 1;
 
   return (
     <Card>
@@ -36,25 +38,29 @@ export function NextFarmerCard() {
         ) : null}
         {loading ? (
           <Skeleton className="h-12 w-full" />
-        ) : nextWaiting ? (
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="font-semibold">{nextWaiting.farmerName}</p>
-              <p className="text-sm text-muted-foreground">
-                {en.farmer.token} {nextWaiting.tokenNumber} · {nextWaiting.timeSlot} ·{" "}
-                {nextWaiting.commodity}
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <StatusBadge status={nextWaiting.status} />
-              <Button disabled={isPending(nextWaiting.id)} onClick={() => callNext(nextWaiting.id)}>
-                <PhoneCall className="size-4" aria-hidden="true" />
-                {en.officer.callNext}
-              </Button>
-            </div>
-          </div>
-        ) : (
+        ) : nextWaitingByCenter.length === 0 ? (
           <EmptyState icon={Users} title={en.queue.noFarmersWaiting} />
+        ) : (
+          <ul className="space-y-3">
+            {nextWaitingByCenter.map((entry) => (
+              <li key={entry.id} className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="font-semibold">{entry.farmerName}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {en.farmer.token} {entry.tokenNumber} · {entry.timeSlot} · {entry.commodity}
+                    {showCenterLabel ? ` · ${entry.centerName}` : ""}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <StatusBadge status={entry.status} />
+                  <Button disabled={isPending(entry.id)} onClick={() => callNext(entry.id)}>
+                    <PhoneCall className="size-4" aria-hidden="true" />
+                    {en.officer.callNext}
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
         )}
       </CardContent>
     </Card>
