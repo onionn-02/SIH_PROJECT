@@ -9,7 +9,15 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { en } from "@/i18n/en";
 import { useFarmerAppointments } from "@/hooks/use-farmer-appointments";
+import { useMyQueuePosition } from "@/hooks/use-my-queue-position";
 import { getUpcomingAppointments } from "@/lib/appointments/derive";
+import type { DemoAppointment } from "@/lib/demo/types";
+
+/** One list row with its own live queue-position fetch (a hook can't run inside the .map() below). */
+function ScheduleAppointmentCard({ appointment }: { appointment: DemoAppointment }) {
+  const queuePosition = useMyQueuePosition(appointment.id, appointment.status);
+  return <AppointmentCard appointment={{ ...appointment, queuePosition }} />;
+}
 
 export default function FarmerSchedulePage() {
   const { appointments, loading, error } = useFarmerAppointments();
@@ -35,7 +43,7 @@ export default function FarmerSchedulePage() {
       ) : (
         <div className="space-y-4">
           {upcoming.map((appointment) => (
-            <AppointmentCard key={appointment.id} appointment={appointment} />
+            <ScheduleAppointmentCard key={appointment.id} appointment={appointment} />
           ))}
         </div>
       )}

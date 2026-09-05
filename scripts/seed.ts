@@ -2,9 +2,15 @@
  * Seeds the connected Firebase project with the predictable demo scenario
  * described in CLAUDE.md §21, §33 — one hero farmer (Ramesh Patil, Token
  * A104, Nashik center) plus a believable queue of other farmers, a second
- * center, and matching history/notifications. Safe to re-run: every
- * document uses a fixed ID, so re-running overwrites the same demo data
- * instead of duplicating it.
+ * center, and matching history/notifications. Safe to re-run as a "reset
+ * the demo" command: every fixed-ID document gets fully overwritten, AND
+ * (see clearStaleDemoData) any status_history/procurement_records/
+ * notifications a *real* app action (an officer call, a completed
+ * procurement, a sent announcement) created against these same demo
+ * appointments/farmer in between reseeds gets deleted first — otherwise
+ * those auto-ID documents would silently survive a reset and show up as
+ * stale/contradictory data (e.g. a "Completed" timestamp on an appointment
+ * this reseed just put back to WAITING).
  *
  * Usage: npm run seed   (reads FIREBASE_ADMIN_* from .env.local)
  */
@@ -210,6 +216,38 @@ async function seedRecord(appointmentId: string, farmerId: string, centerId: str
   });
 }
 
+/**
+ * Deletes every status_history/procurement_records document tied to one of
+ * the fixed demo appointment IDs, and every notification sent to the demo
+ * farmer — regardless of that document's own ID. Must run before this
+ * script writes its own fixed-ID data back, so a reseed is a true reset
+ * even after the demo has been exercised for real in between (see the
+ * module docstring above).
+ */
+async function clearStaleDemoData(appointmentIds: string[], farmerUid: string) {
+  const batch = db.batch();
+  let deletions = 0;
+
+  for (const [collection, field] of [
+    ["status_history", "appointment_id"],
+    ["procurement_records", "appointment_id"],
+  ] as const) {
+    const snapshot = await db.collection(collection).where(field, "in", appointmentIds).get();
+    for (const doc of snapshot.docs) {
+      batch.delete(doc.ref);
+      deletions++;
+    }
+  }
+
+  const notifSnapshot = await db.collection("notifications").where("user_id", "==", farmerUid).get();
+  for (const doc of notifSnapshot.docs) {
+    batch.delete(doc.ref);
+    deletions++;
+  }
+
+  if (deletions > 0) await batch.commit();
+}
+
 async function seedNotification(id: string, userId: string, title: string, message: string, type: string, createdAt: Date, read: boolean) {
   await db.doc(`notifications/${id}`).set({
     user_id: userId,
@@ -355,6 +393,11 @@ async function main() {
     status: "COMPLETED",
     paymentStatus: "PAID",
   });
+
+  await clearStaleDemoData(
+    [...queue.map((a) => a.id), "appt-b210", "appt-c088", "appt-d045", "appt-e199", "appt-f156"],
+    farmerUid
+  );
 
   // --- Status history for the hero's appointments ---
   await seedHistory("appt-a104", farmerUid, [
