@@ -62,12 +62,22 @@ export default function FarmerDashboardPage() {
       </section>
 
       <section aria-labelledby="notifications-heading">
-        <h2
-          id="notifications-heading"
-          className="mb-3 text-sm font-semibold tracking-wide text-muted-foreground uppercase"
-        >
-          {en.farmer.recentNotifications}
-        </h2>
+        <div className="mb-3 flex items-center justify-between">
+          <h2
+            id="notifications-heading"
+            className="text-sm font-semibold tracking-wide text-muted-foreground uppercase"
+          >
+            {en.farmer.recentNotifications}
+          </h2>
+          {notifications.length > 3 ? (
+            <Link
+              href={ROUTES.farmer.notifications}
+              className="text-sm font-medium text-primary hover:underline"
+            >
+              {en.farmer.viewAllNotifications}
+            </Link>
+          ) : null}
+        </div>
         <NotificationList notifications={notifications.slice(0, 3)} />
       </section>
     </div>

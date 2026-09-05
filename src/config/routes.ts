@@ -10,6 +10,7 @@ export const ROUTES = {
     schedule: "/farmer/schedule",
     procurement: (id: string) => `/farmer/procurement/${id}`,
     history: "/farmer/history",
+    notifications: "/farmer/notifications",
   },
   officer: {
     dashboard: "/officer/dashboard",
