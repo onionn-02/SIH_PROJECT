@@ -5,6 +5,7 @@ import { en } from "@/i18n/en";
 const TABS = [
   { href: ROUTES.officer.dashboard, label: en.nav.officerDashboard },
   { href: ROUTES.officer.queue, label: en.nav.officerQueue },
+  { href: ROUTES.officer.history, label: en.nav.officerHistory },
 ];
 
 /** Sub-navigation between the officer's own screens. */

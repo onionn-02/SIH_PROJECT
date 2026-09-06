@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Procurement Tracker",
+  title: "Fasal Flow",
   description: "Farmer procurement scheduling, queue and status tracking.",
 };
 

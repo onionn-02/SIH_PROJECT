@@ -1,12 +1,53 @@
 import Link from "next/link";
-import { ChevronRight, MapPin, Ticket, Users, type LucideIcon } from "lucide-react";
+import { useState } from "react";
+import { ChevronRight, MapPin, Ticket, Users, XCircle, type LucideIcon } from "lucide-react";
 
+import { PaymentStatusBadge } from "@/components/farmer/payment-status-badge";
 import { StatusBadge } from "@/components/farmer/status-badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ROUTES } from "@/config/routes";
-import { en } from "@/i18n/en";
+import { useTranslations } from "@/hooks/use-translations";
+import { useAuth } from "@/lib/auth/auth-context";
 import { cn } from "@/lib/utils";
+import { cancelOwnAppointment } from "@/services/booking";
 import type { DemoAppointment } from "@/lib/demo/types";
+
+/** Self-cancel action shown only while an appointment is still SCHEDULED (CLAUDE.md §7, firestore.rules). */
+function CancelAppointmentButton({ appointmentId }: { appointmentId: string }) {
+  const t = useTranslations();
+  const { user } = useAuth();
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleCancel() {
+    if (!user || pending) return;
+    if (!window.confirm(t.farmer.confirmCancelAppointment)) return;
+    setPending(true);
+    setError(null);
+    try {
+      await cancelOwnAppointment(appointmentId, user.uid);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t.farmer.cancelAppointmentFailed);
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col items-end gap-1">
+      <Button type="button" variant="ghost" size="sm" disabled={pending} onClick={handleCancel}>
+        <XCircle className="size-4" aria-hidden="true" />
+        {pending ? t.farmer.cancelling : t.farmer.cancelAppointment}
+      </Button>
+      {error ? (
+        <p role="alert" className="text-xs text-destructive">
+          {error}
+        </p>
+      ) : null}
+    </div>
+  );
+}
 
 function Stat({
   label,
@@ -38,6 +79,7 @@ export function AppointmentCard({
   appointment: DemoAppointment;
   highlight?: boolean;
 }) {
+  const t = useTranslations();
   return (
     <Card className={highlight ? "ring-2 ring-primary/20" : undefined}>
       <CardHeader>
@@ -54,25 +96,30 @@ export function AppointmentCard({
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Stat label={en.farmer.date} value={appointment.dateLabel} />
-          <Stat label={en.farmer.time} value={appointment.timeSlot} />
-          <Stat label={en.farmer.token} value={appointment.tokenNumber} emphasize icon={Ticket} />
+          <Stat label={t.farmer.date} value={appointment.dateLabel} />
+          <Stat label={t.farmer.time} value={appointment.timeSlot} />
+          <Stat label={t.farmer.token} value={appointment.tokenNumber} emphasize icon={Ticket} />
           <Stat
-            label={en.farmer.queuePosition}
+            label={t.farmer.queuePosition}
             value={appointment.queuePosition != null ? `#${appointment.queuePosition}` : "—"}
             emphasize={appointment.queuePosition != null}
             icon={Users}
           />
         </div>
-        <div className="flex items-center justify-between border-t pt-3 text-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-3 text-sm">
           <span className="text-muted-foreground">{appointment.commodity}</span>
-          <Link
-            href={ROUTES.farmer.procurement(appointment.id)}
-            className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
-          >
-            {en.farmer.viewDetails}
-            <ChevronRight className="size-4" aria-hidden="true" />
-          </Link>
+          <div className="flex items-center gap-3">
+            {appointment.status === "SCHEDULED" ? (
+              <CancelAppointmentButton appointmentId={appointment.id} />
+            ) : null}
+            <Link
+              href={ROUTES.farmer.procurement(appointment.id)}
+              className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
+            >
+              {t.farmer.viewDetails}
+              <ChevronRight className="size-4" aria-hidden="true" />
+            </Link>
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -81,6 +128,7 @@ export function AppointmentCard({
 
 /** Compact row used for past procurement records in the history list. */
 export function HistoryCard({ appointment }: { appointment: DemoAppointment }) {
+  const t = useTranslations();
   return (
     <Card>
       <CardContent className="flex items-center justify-between gap-4">
@@ -91,17 +139,18 @@ export function HistoryCard({ appointment }: { appointment: DemoAppointment }) {
           </p>
           {appointment.quantity != null ? (
             <p className="text-sm text-muted-foreground">
-              {en.farmer.quantity}: {appointment.quantity} kg
+              {t.farmer.quantity}: {appointment.quantity} kg
             </p>
           ) : null}
         </div>
         <div className="flex shrink-0 flex-col items-end gap-2">
           <StatusBadge status={appointment.status} />
+          {appointment.paymentStatus ? <PaymentStatusBadge status={appointment.paymentStatus} /> : null}
           <Link
             href={ROUTES.farmer.procurement(appointment.id)}
             className="text-xs font-medium text-primary hover:underline"
           >
-            {en.farmer.viewDetails}
+            {t.farmer.viewDetails}
           </Link>
         </div>
       </CardContent>

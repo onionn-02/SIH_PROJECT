@@ -4,32 +4,38 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 
+import { Logo } from "@/components/shared/logo";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/config/routes";
-import { en } from "@/i18n/en";
+import { useTranslations } from "@/hooks/use-translations";
 import { useAuth } from "@/lib/auth/auth-context";
 import type { UserRole } from "@/types/firestore";
+import type { Translations } from "@/i18n/en";
 
-const roleDashboardLink: Record<UserRole, { href: string; label: string }> = {
-  farmer: { href: ROUTES.farmer.dashboard, label: en.nav.farmerDashboard },
-  officer: { href: ROUTES.officer.dashboard, label: en.nav.officerDashboard },
-  admin: { href: ROUTES.admin.dashboard, label: en.nav.adminDashboard },
-};
+function roleDashboardLink(t: Translations): Record<UserRole, { href: string; label: string }> {
+  return {
+    farmer: { href: ROUTES.farmer.dashboard, label: t.nav.farmerDashboard },
+    officer: { href: ROUTES.officer.dashboard, label: t.nav.officerDashboard },
+    admin: { href: ROUTES.admin.dashboard, label: t.nav.adminDashboard },
+  };
+}
 
 export function SiteNav() {
+  const t = useTranslations();
   const { user, profile, signOutUser } = useAuth();
   const router = useRouter();
 
   const links = [
-    ...(profile ? [roleDashboardLink[profile.role]] : []),
-    { href: ROUTES.about, label: en.nav.about },
+    ...(profile ? [roleDashboardLink(t)[profile.role]] : []),
+    { href: ROUTES.about, label: t.nav.about },
   ];
 
   return (
     <header className="border-b bg-background">
       <nav className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
-        <Link href={ROUTES.home} className="text-sm font-semibold">
-          {en.app.name}
+        <Link href={ROUTES.home} className="flex items-center gap-2 text-sm font-semibold">
+          <Logo size={28} />
+          {t.app.name}
         </Link>
         <div className="flex items-center gap-4 text-sm text-muted-foreground">
           {links.map((link) => (
@@ -50,7 +56,7 @@ export function SiteNav() {
                 }}
               >
                 <LogOut className="size-4" aria-hidden="true" />
-                Sign out
+                {t.nav.signOut}
               </Button>
             </div>
           ) : (
@@ -58,7 +64,7 @@ export function SiteNav() {
               href={ROUTES.login}
               className="rounded-md bg-primary px-3 py-1.5 text-primary-foreground hover:opacity-90"
             >
-              {en.nav.login}
+              {t.nav.login}
             </Link>
           )}
         </div>

@@ -4,6 +4,9 @@ import { formatTimestampLabel } from "@/lib/format/datetime";
 import { db } from "@/lib/firebase/client";
 import type { DemoStatusStep } from "@/lib/demo/types";
 import type { AppointmentStatus, StatusHistoryEntry } from "@/types/firestore";
+import type { Timestamp } from "firebase/firestore";
+
+const TERMINAL_STATUSES: AppointmentStatus[] = ["COMPLETED", "CANCELLED", "NO_SHOW"];
 
 /** The fixed set of steps the farmer-facing timeline shows (CLAUDE.md §6). */
 const TIMELINE_STATUSES: AppointmentStatus[] = [
@@ -64,6 +67,46 @@ export async function getWaitAndCallTimestamps(
     waitingAt: waiting?.created_at ? waiting.created_at.toDate() : null,
     calledAt: called?.created_at ? called.created_at.toDate() : null,
   };
+}
+
+/**
+ * Batch lookup of when each appointment actually reached its terminal
+ * status — used by the officer history page (CLAUDE.md §24
+ * `/officer/history`) instead of the appointment's own `updated_at`, which
+ * the seed script always stamps as "now" regardless of a backfilled demo
+ * record's fictional date (CLAUDE.md §33). Chunked to Firestore's `in`
+ * operator limit. Appointments with no matching entry (e.g. seeded queue
+ * items that were never given a full status_history backfill) are simply
+ * absent from the returned map — the caller falls back to `updated_at`.
+ */
+export async function getTerminalStatusTimestamps(
+  appointmentIds: string[]
+): Promise<Map<string, Timestamp>> {
+  const result = new Map<string, Timestamp>();
+  if (appointmentIds.length === 0) return result;
+
+  const chunks: string[][] = [];
+  for (let i = 0; i < appointmentIds.length; i += 30) {
+    chunks.push(appointmentIds.slice(i, i + 30));
+  }
+
+  await Promise.all(
+    chunks.map(async (chunk) => {
+      const snapshot = await getDocs(
+        query(collection(db, "status_history"), where("appointment_id", "in", chunk))
+      );
+      for (const doc of snapshot.docs) {
+        const entry = doc.data() as StatusHistoryEntry;
+        if (!TERMINAL_STATUSES.includes(entry.new_status)) continue;
+        const existing = result.get(entry.appointment_id);
+        if (!existing || entry.created_at.toMillis() > existing.toMillis()) {
+          result.set(entry.appointment_id, entry.created_at);
+        }
+      }
+    })
+  );
+
+  return result;
 }
 
 export async function recordStatusChange(

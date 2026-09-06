@@ -9,11 +9,11 @@ import {
 } from "firebase/firestore";
 
 import { db } from "@/lib/firebase/client";
-import { formatDateLabel } from "@/lib/format/datetime";
+import { formatDateLabel, formatTimestampLabel } from "@/lib/format/datetime";
 import { withQueuePositions } from "@/lib/queue/positions";
 import { getAllCenters, getCenter } from "@/services/centers";
 import { getRecordedQuantity } from "@/services/procurement-records";
-import { getStatusHistory } from "@/services/status-history";
+import { getStatusHistory, getTerminalStatusTimestamps } from "@/services/status-history";
 import { isValidStatusTransition } from "@/lib/validation/status-transitions";
 import type { DemoAppointment, DemoCenter } from "@/lib/demo/types";
 import type { Appointment, AppointmentStatus, NotificationType } from "@/types/firestore";
@@ -188,6 +188,107 @@ export function subscribeCenterQueue(
                 }));
               perCenterQueues.set(centerId, withQueuePositions(entries));
               emit();
+            },
+            (err) => onError(err)
+          )
+        );
+      }
+    })
+    .catch((err) => onError(err instanceof Error ? err : new Error("Failed to load centers.")));
+
+  return () => {
+    stopped = true;
+    unsubscribes.forEach((unsub) => unsub());
+  };
+}
+
+export interface HistoryEntry {
+  id: string;
+  tokenNumber: string;
+  farmerName: string;
+  farmerPhone: string;
+  commodity: string;
+  scheduledDateLabel: string;
+  /** When this outcome was actually recorded (the appointment's `updated_at`) — not the originally scheduled slot time, which can be minutes or days off from when an officer actually called/completed/no-showed it. */
+  recordedAtLabel: string;
+  status: AppointmentStatus;
+  centerId: string;
+  centerName: string;
+  recordedAtMillis: number;
+}
+
+const HISTORY_STATUSES: AppointmentStatus[] = ["COMPLETED", "CANCELLED", "NO_SHOW"];
+
+/**
+ * Live log of every completed/cancelled/no-show appointment across one or
+ * more centers, most recent first — the officer-facing counterpart to the
+ * farmer's own history page (CLAUDE.md §24 `/officer/history`). Unlike
+ * `subscribeCenterQueue`, this is not scoped to today: it's the durable
+ * record of what has happened at a center, not the live working queue.
+ * Mirrors `subscribeCenterQueue`'s one-listener-per-center approach so each
+ * query's equality/`in` filters line up with what the security rule checks.
+ */
+export function subscribeCenterHistory(
+  centerIds: string[],
+  onData: (entries: HistoryEntry[]) => void,
+  onError: (error: Error) => void
+): () => void {
+  if (centerIds.length === 0) {
+    onData([]);
+    return () => {};
+  }
+
+  const perCenterHistory = new Map<string, HistoryEntry[]>();
+  const unsubscribes: (() => void)[] = [];
+  let stopped = false;
+
+  function emit() {
+    const combined = centerIds
+      .flatMap((id) => perCenterHistory.get(id) ?? [])
+      .sort((a, b) => b.recordedAtMillis - a.recordedAtMillis);
+    onData(combined);
+  }
+
+  getAllCenters()
+    .then((centers) => {
+      if (stopped) return;
+      const centerNames = new Map(centers.map((c) => [c.id, c.name]));
+
+      for (const centerId of centerIds) {
+        const q = query(
+          collection(db, "appointments"),
+          where("center_id", "==", centerId),
+          where("status", "in", HISTORY_STATUSES)
+        );
+        unsubscribes.push(
+          onSnapshot(
+            q,
+            async (snapshot) => {
+              try {
+                const docs = snapshot.docs.map((d) => ({ id: d.id, data: d.data() as Appointment }));
+                const terminalTimestamps = await getTerminalStatusTimestamps(docs.map((d) => d.id));
+
+                const entries = docs.map(({ id, data }) => {
+                  const recordedAt = terminalTimestamps.get(id) ?? data.updated_at;
+                  return {
+                    id,
+                    tokenNumber: data.token_number,
+                    farmerName: data.farmer_name,
+                    farmerPhone: data.farmer_phone,
+                    commodity: data.commodity,
+                    scheduledDateLabel: formatDateLabel(data.date),
+                    recordedAtLabel: formatTimestampLabel(recordedAt) ?? data.time_label,
+                    status: data.status,
+                    centerId,
+                    centerName: centerNames.get(centerId) ?? "Unknown center",
+                    recordedAtMillis: recordedAt.toMillis(),
+                  };
+                });
+                perCenterHistory.set(centerId, entries);
+                emit();
+              } catch (err) {
+                onError(err instanceof Error ? err : new Error("Failed to load history."));
+              }
             },
             (err) => onError(err)
           )

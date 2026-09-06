@@ -1,6 +1,6 @@
 import { AlertTriangle, Check, XCircle } from "lucide-react";
 
-import { en } from "@/i18n/en";
+import { useTranslations } from "@/hooks/use-translations";
 import { cn } from "@/lib/utils";
 import type { DemoStatusStep } from "@/lib/demo/types";
 import type { AppointmentStatus } from "@/types/firestore";
@@ -33,12 +33,14 @@ function findTimestamp(history: DemoStatusStep[], statuses: AppointmentStatus[])
  * forcing them into the step sequence.
  */
 export function StatusTimeline({ status, statusHistory, cancellationReason }: StatusTimelineProps) {
+  const t = useTranslations();
+
   if (status === "CANCELLED") {
     return (
       <div className="flex items-start gap-3 rounded-lg border border-destructive/20 bg-destructive/5 p-4">
         <XCircle className="mt-0.5 size-5 shrink-0 text-destructive" aria-hidden="true" />
         <div>
-          <p className="font-medium text-destructive">{en.timeline.cancelledTitle}</p>
+          <p className="font-medium text-destructive">{t.timeline.cancelledTitle}</p>
           {cancellationReason ? (
             <p className="mt-1 text-sm text-muted-foreground">{cancellationReason}</p>
           ) : null}
@@ -52,8 +54,8 @@ export function StatusTimeline({ status, statusHistory, cancellationReason }: St
       <div className="flex items-start gap-3 rounded-lg border border-destructive/20 bg-destructive/5 p-4">
         <AlertTriangle className="mt-0.5 size-5 shrink-0 text-destructive" aria-hidden="true" />
         <div>
-          <p className="font-medium text-destructive">{en.timeline.noShowTitle}</p>
-          <p className="mt-1 text-sm text-muted-foreground">{en.timeline.noShowBody}</p>
+          <p className="font-medium text-destructive">{t.timeline.noShowTitle}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{t.timeline.noShowBody}</p>
         </div>
       </div>
     );
@@ -63,26 +65,29 @@ export function StatusTimeline({ status, statusHistory, cancellationReason }: St
 
   const calledInProgressLabel =
     status === "CALLED"
-      ? en.status.CALLED
+      ? t.status.CALLED
       : status === "IN_PROGRESS" || currentIndex > 2
-        ? en.status.IN_PROGRESS
-        : en.timeline.calledInProgress;
+        ? t.status.IN_PROGRESS
+        : t.timeline.calledInProgress;
 
   const steps = [
     {
-      label: en.timeline.scheduled,
+      label: t.timeline.scheduled,
       timestamp: findTimestamp(statusHistory, ["SCHEDULED"]),
     },
     {
-      label: en.timeline.waiting,
+      label: t.timeline.waiting,
       timestamp: findTimestamp(statusHistory, ["WAITING"]),
     },
     {
       label: calledInProgressLabel,
-      timestamp: findTimestamp(statusHistory, ["CALLED", "IN_PROGRESS"]),
+      // IN_PROGRESS first: once procurement has started, the merged step
+      // should show when it started, not the earlier "called" moment it's
+      // already past (CALLED is only the fallback while still just called).
+      timestamp: findTimestamp(statusHistory, ["IN_PROGRESS", "CALLED"]),
     },
     {
-      label: en.timeline.completed,
+      label: t.timeline.completed,
       timestamp: findTimestamp(statusHistory, ["COMPLETED"]),
     },
   ];
@@ -135,7 +140,7 @@ export function StatusTimeline({ status, statusHistory, cancellationReason }: St
                 ) : null}
               </p>
               <p className="text-xs text-muted-foreground">
-                {step.timestamp ?? en.timeline.notYet}
+                {step.timestamp ?? t.timeline.notYet}
               </p>
             </div>
           </li>

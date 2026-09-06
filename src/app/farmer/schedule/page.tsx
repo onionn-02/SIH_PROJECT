@@ -8,9 +8,9 @@ import { FarmerTabs } from "@/components/farmer/farmer-tabs";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
-import { en } from "@/i18n/en";
 import { useFarmerAppointments } from "@/hooks/use-farmer-appointments";
 import { useMyQueuePosition } from "@/hooks/use-my-queue-position";
+import { useTranslations } from "@/hooks/use-translations";
 import { getUpcomingAppointments } from "@/lib/appointments/derive";
 import type { DemoAppointment } from "@/lib/demo/types";
 
@@ -21,16 +21,14 @@ function ScheduleAppointmentCard({ appointment }: { appointment: DemoAppointment
 }
 
 export default function FarmerSchedulePage() {
+  const t = useTranslations();
   const { appointments, loading, error } = useFarmerAppointments();
   const upcoming = getUpcomingAppointments(appointments);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
       <FarmerTabs />
-      <PageHeader
-        title={en.farmer.yourSchedule}
-        description="All of your scheduled and in-progress procurement appointments."
-      />
+      <PageHeader title={t.farmer.yourSchedule} description={t.farmer.scheduleDescription} />
 
       {loading ? (
         <div className="space-y-4">
@@ -38,9 +36,9 @@ export default function FarmerSchedulePage() {
           <Skeleton className="h-40 w-full" />
         </div>
       ) : error ? (
-        <EmptyState icon={AlertTriangle} title="Couldn't load your schedule" description={error} />
+        <EmptyState icon={AlertTriangle} title={t.farmer.loadErrorSchedule} description={error} />
       ) : upcoming.length === 0 ? (
-        <EmptyState icon={CalendarDays} title={en.farmer.noSchedule} />
+        <EmptyState icon={CalendarDays} title={t.farmer.noSchedule} />
       ) : (
         <div className="space-y-4">
           {upcoming.map((appointment) => (

@@ -5,7 +5,7 @@
  */
 export const en = {
   app: {
-    name: "Procurement Tracker",
+    name: "Fasal Flow",
   },
   nav: {
     home: "Home",
@@ -15,8 +15,11 @@ export const en = {
     schedule: "Schedule",
     history: "History",
     notifications: "Notifications",
+    profile: "Profile",
+    signOut: "Sign out",
     officerDashboard: "Officer Dashboard",
     officerQueue: "Queue",
+    officerHistory: "History",
     adminDashboard: "Admin Dashboard",
     adminUsers: "Users",
     adminCenters: "Centers",
@@ -25,6 +28,7 @@ export const en = {
   },
   farmer: {
     greeting: "Welcome",
+    dashboardDescription: "Here's what's happening with your procurement.",
     status: "Procurement Status",
     token: "Token",
     queuePosition: "Your Queue Position",
@@ -33,9 +37,17 @@ export const en = {
     upcomingAppointment: "Upcoming Appointment",
     noUpcomingAppointment: "You have no upcoming appointment right now.",
     yourSchedule: "Your Schedule",
+    scheduleDescription: "All of your scheduled and in-progress procurement appointments.",
     noSchedule: "No procurement schedules yet.",
     procurementHistory: "Procurement History",
+    historyDescription: "Your completed, cancelled and missed procurement records.",
     noHistory: "No past procurement records yet.",
+    loadErrorAppointment: "Couldn't load your appointment",
+    loadErrorAppointmentDetails: "Couldn't load this appointment",
+    loadErrorSchedule: "Couldn't load your schedule",
+    loadErrorHistory: "Couldn't load your history",
+    loadErrorNotifications: "Couldn't load your notifications",
+    loadErrorAvailableSchedules: "Couldn't load available schedules",
     viewDetails: "View details",
     backToDashboard: "Back to dashboard",
     recentNotifications: "Recent Notifications",
@@ -58,6 +70,33 @@ export const en = {
     booking: "Booking…",
     bookingConfirmed: (token: string) => `Booked! Your token is ${token}.`,
     bookingFailed: "Could not book this slot right now.",
+    cancelAppointment: "Cancel appointment",
+    cancelling: "Cancelling…",
+    confirmCancelAppointment: "Cancel this appointment? This cannot be undone.",
+    cancelAppointmentFailed: "Could not cancel this appointment right now.",
+    paymentStatus: "Payment Status",
+    paymentDemoNote: "Demo/Mock — no real payment is processed in this prototype.",
+    profile: {
+      title: "Your Profile",
+      description: "Keep your basic details up to date.",
+      fullName: "Full name",
+      phone: "Phone number",
+      preferredLanguage: "Preferred language",
+      languageEnglish: "English",
+      languageHindi: "Hindi",
+      languageMarathi: "Marathi",
+      email: "Email",
+      role: "Role",
+      save: "Save changes",
+      saving: "Saving…",
+      saved: "Profile updated.",
+      updateFailed: "Could not update your profile right now.",
+    },
+  },
+  payment: {
+    PENDING: "Pending",
+    PAID: "Paid",
+    FAILED: "Failed",
   },
   status: {
     SCHEDULED: "Scheduled",
@@ -103,6 +142,10 @@ export const en = {
     startProcurement: "Start Procurement",
     completeProcurement: "Complete Procurement",
     noShow: "No Show",
+    historyDescription: "Completed, cancelled and no-show appointments at your center(s).",
+    noHistory: "No past procurement records yet.",
+    scheduledFor: "Scheduled For",
+    recordedAt: "Recorded At",
   },
   queue: {
     todayTotal: "Today's Appointments",
@@ -198,6 +241,11 @@ export const en = {
     notEnoughData: "Not enough data yet.",
     noActivityToday: "No appointments recorded today.",
   },
-} as const;
+};
 
+/**
+ * Intentionally not `as const` — that would pin every string to its exact
+ * English literal type, and hi.ts/mr.ts (typed as `Translations`) need to
+ * hold their own different string values for the same keys.
+ */
 export type Translations = typeof en;

@@ -1,7 +1,8 @@
 import { en } from "./en";
+import { hi } from "./hi";
+import { mr } from "./mr";
 
-/** Only English is implemented in Day 1; Marathi/Hindi are P2 (CLAUDE.md §13). */
-export const translations = { en } as const;
+export const translations = { en, hi, mr } as const;
 export type Locale = keyof typeof translations;
 
 export function getTranslations(locale: Locale = "en") {

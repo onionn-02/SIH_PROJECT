@@ -11,14 +11,15 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ROUTES } from "@/config/routes";
-import { en } from "@/i18n/en";
 import { useFarmerAppointments } from "@/hooks/use-farmer-appointments";
 import { useMyQueuePosition } from "@/hooks/use-my-queue-position";
 import { useNotifications } from "@/hooks/use-notifications";
+import { useTranslations } from "@/hooks/use-translations";
 import { getPrimaryAppointment } from "@/lib/appointments/derive";
 import { useAuth } from "@/lib/auth/auth-context";
 
 export default function FarmerDashboardPage() {
+  const t = useTranslations();
   const { profile } = useAuth();
   const { appointments, loading, error } = useFarmerAppointments();
   const { notifications } = useNotifications();
@@ -31,8 +32,8 @@ export default function FarmerDashboardPage() {
     <div className="mx-auto max-w-3xl px-4 py-8">
       <FarmerTabs />
       <PageHeader
-        title={`${en.farmer.greeting}, ${profile?.full_name.split(" ")[0] ?? ""}`}
-        description="Here's what's happening with your procurement."
+        title={`${t.farmer.greeting}, ${profile?.full_name.split(" ")[0] ?? ""}`}
+        description={t.farmer.dashboardDescription}
       />
 
       <section aria-labelledby="upcoming-heading" className="mb-8">
@@ -40,21 +41,21 @@ export default function FarmerDashboardPage() {
           id="upcoming-heading"
           className="mb-3 text-sm font-semibold tracking-wide text-muted-foreground uppercase"
         >
-          {en.farmer.upcomingAppointment}
+          {t.farmer.upcomingAppointment}
         </h2>
         {loading ? (
           <Skeleton className="h-48 w-full" />
         ) : error ? (
-          <EmptyState icon={AlertTriangle} title="Couldn't load your appointment" description={error} />
+          <EmptyState icon={AlertTriangle} title={t.farmer.loadErrorAppointment} description={error} />
         ) : displayedAppointment ? (
           <AppointmentCard appointment={displayedAppointment} highlight />
         ) : (
           <EmptyState
             icon={CalendarDays}
-            title={en.farmer.noUpcomingAppointment}
+            title={t.farmer.noUpcomingAppointment}
             action={
               <Button render={<Link href={ROUTES.farmer.schedule} />} className="mt-2">
-                {en.nav.schedule}
+                {t.nav.schedule}
               </Button>
             }
           />
@@ -67,14 +68,14 @@ export default function FarmerDashboardPage() {
             id="notifications-heading"
             className="text-sm font-semibold tracking-wide text-muted-foreground uppercase"
           >
-            {en.farmer.recentNotifications}
+            {t.farmer.recentNotifications}
           </h2>
           {notifications.length > 3 ? (
             <Link
               href={ROUTES.farmer.notifications}
               className="text-sm font-medium text-primary hover:underline"
             >
-              {en.farmer.viewAllNotifications}
+              {t.farmer.viewAllNotifications}
             </Link>
           ) : null}
         </div>

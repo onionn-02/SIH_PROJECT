@@ -139,3 +139,50 @@ export async function bookAppointment(input: BookSlotInput): Promise<BookSlotRes
     return { appointmentId: appointmentRef.id, tokenNumber };
   });
 }
+
+/**
+ * A farmer cancelling their own appointment before it's been checked in
+ * (CLAUDE.md §7 farmer self-service). Only valid while the appointment is
+ * still SCHEDULED — firestore.rules rejects this for any other status, so
+ * once an officer has moved it to WAITING the farmer must contact the
+ * center instead. Frees the slot back up by dropping the schedule's
+ * `booked_count`, mirroring bookAppointment's atomic +1/-1 pairing.
+ */
+export async function cancelOwnAppointment(appointmentId: string, farmerId: string): Promise<void> {
+  const appointmentRef = doc(db, "appointments", appointmentId);
+
+  await runTransaction(db, async (tx) => {
+    const appointmentSnap = await tx.get(appointmentRef);
+    if (!appointmentSnap.exists()) throw new Error("This appointment no longer exists.");
+    const appointment = appointmentSnap.data() as Appointment;
+
+    if (appointment.farmer_id !== farmerId) {
+      throw new Error("This isn't your appointment.");
+    }
+    if (appointment.status !== "SCHEDULED") {
+      throw new Error("This appointment can no longer be self-cancelled — please contact the center.");
+    }
+
+    const scheduleRef = doc(db, "procurement_schedules", appointment.schedule_id);
+    const scheduleSnap = await tx.get(scheduleRef);
+    const now = serverTimestamp();
+
+    tx.update(appointmentRef, { status: "CANCELLED" satisfies AppointmentStatus, updated_at: now });
+
+    if (scheduleSnap.exists()) {
+      const schedule = scheduleSnap.data() as ProcurementSchedule;
+      const bookedCount = schedule.booked_count ?? 0;
+      tx.update(scheduleRef, { booked_count: Math.max(bookedCount - 1, 0), updated_at: now });
+    }
+
+    tx.set(doc(collection(db, "status_history")), {
+      appointment_id: appointmentId,
+      farmer_id: farmerId,
+      old_status: "SCHEDULED" satisfies AppointmentStatus,
+      new_status: "CANCELLED" satisfies AppointmentStatus,
+      changed_by: farmerId,
+      note: "Cancelled by farmer.",
+      created_at: now,
+    });
+  });
+}

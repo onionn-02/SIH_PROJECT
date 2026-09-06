@@ -3,14 +3,15 @@
 import { Bell } from "lucide-react";
 
 import { EmptyState } from "@/components/shared/empty-state";
-import { en } from "@/i18n/en";
+import { useTranslations } from "@/hooks/use-translations";
 import { cn } from "@/lib/utils";
 import { markNotificationRead } from "@/services/notifications";
 import type { DemoNotification } from "@/lib/demo/types";
 
 export function NotificationList({ notifications }: { notifications: DemoNotification[] }) {
+  const t = useTranslations();
   if (notifications.length === 0) {
-    return <EmptyState icon={Bell} title={en.farmer.noNotifications} />;
+    return <EmptyState icon={Bell} title={t.farmer.noNotifications} />;
   }
 
   return (

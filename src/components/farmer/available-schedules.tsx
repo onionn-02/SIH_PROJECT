@@ -8,13 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
-import { en } from "@/i18n/en";
 import { useAuth } from "@/lib/auth/auth-context";
 import { bookAppointment } from "@/services/booking";
 import { useBookableSchedules } from "@/hooks/use-bookable-schedules";
+import { useTranslations } from "@/hooks/use-translations";
 
 /** Farmer self-booking (CLAUDE.md §5 booking step, Day 7 P0 gap fix). */
 export function AvailableSchedules() {
+  const t = useTranslations();
   const { user, profile } = useAuth();
   const { schedules, loading, error } = useBookableSchedules();
   const [bookingId, setBookingId] = useState<string | null>(null);
@@ -33,9 +34,9 @@ export function AvailableSchedules() {
         farmerName: profile.full_name,
         farmerPhone: profile.phone,
       });
-      setFeedback(en.farmer.bookingConfirmed(result.tokenNumber));
+      setFeedback(t.farmer.bookingConfirmed(result.tokenNumber));
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : en.farmer.bookingFailed);
+      setActionError(err instanceof Error ? err.message : t.farmer.bookingFailed);
     } finally {
       setBookingId(null);
     }
@@ -44,8 +45,8 @@ export function AvailableSchedules() {
   return (
     <div className="space-y-3">
       <div>
-        <h2 className="text-lg font-semibold">{en.farmer.availableSchedules}</h2>
-        <p className="text-sm text-muted-foreground">{en.farmer.availableSchedulesDescription}</p>
+        <h2 className="text-lg font-semibold">{t.farmer.availableSchedules}</h2>
+        <p className="text-sm text-muted-foreground">{t.farmer.availableSchedulesDescription}</p>
       </div>
 
       {actionError ? (
@@ -58,9 +59,9 @@ export function AvailableSchedules() {
       {loading ? (
         <Skeleton className="h-24 w-full" />
       ) : error ? (
-        <EmptyState icon={AlertTriangle} title="Couldn't load available schedules" description={error} />
+        <EmptyState icon={AlertTriangle} title={t.farmer.loadErrorAvailableSchedules} description={error} />
       ) : schedules.length === 0 ? (
-        <EmptyState icon={CalendarPlus} title={en.farmer.noAvailableSchedules} />
+        <EmptyState icon={CalendarPlus} title={t.farmer.noAvailableSchedules} />
       ) : (
         <ul className="space-y-3">
           {schedules.map((schedule) => (
@@ -72,7 +73,7 @@ export function AvailableSchedules() {
                       <p className="font-medium">
                         {schedule.commodity} · {schedule.centerName}
                       </p>
-                      <Badge variant="secondary">{en.farmer.slotsRemaining(schedule.slotsRemaining)}</Badge>
+                      <Badge variant="secondary">{t.farmer.slotsRemaining(schedule.slotsRemaining)}</Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">
                       {schedule.dateLabel} · {schedule.startTime}–{schedule.endTime}
@@ -83,7 +84,7 @@ export function AvailableSchedules() {
                     disabled={bookingId === schedule.id}
                     onClick={() => handleBook(schedule.id)}
                   >
-                    {bookingId === schedule.id ? en.farmer.booking : en.farmer.bookSlot}
+                    {bookingId === schedule.id ? t.farmer.booking : t.farmer.bookSlot}
                   </Button>
                 </CardContent>
               </Card>

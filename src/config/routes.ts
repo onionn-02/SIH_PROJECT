@@ -11,10 +11,12 @@ export const ROUTES = {
     procurement: (id: string) => `/farmer/procurement/${id}`,
     history: "/farmer/history",
     notifications: "/farmer/notifications",
+    profile: "/farmer/profile",
   },
   officer: {
     dashboard: "/officer/dashboard",
     queue: "/officer/queue",
+    history: "/officer/history",
   },
   admin: {
     dashboard: "/admin/dashboard",

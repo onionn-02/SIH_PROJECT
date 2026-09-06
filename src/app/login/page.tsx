@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FirebaseError } from "firebase/app";
 import { ShieldCheck, Sprout, Users } from "lucide-react";
 
+import { Logo } from "@/components/shared/logo";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -98,6 +99,9 @@ function LoginForm() {
 
   return (
     <div className="mx-auto max-w-sm px-4 py-16">
+      <div className="mb-6 flex justify-center">
+        <Logo size={56} />
+      </div>
       <PageHeader title={en.login.title} description={en.login.subtitle} />
 
       <Card>
