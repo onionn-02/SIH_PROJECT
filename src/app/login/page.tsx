@@ -24,9 +24,9 @@ const DEMO_BUTTON: Record<
   DemoRole,
   { icon: typeof Sprout; iconClassName: string; label: string }
 > = {
-  farmer: { icon: Sprout, iconClassName: "text-emerald-600", label: en.login.fillFarmerDemo },
-  officer: { icon: Users, iconClassName: "text-blue-600", label: en.login.fillOfficerDemo },
-  admin: { icon: ShieldCheck, iconClassName: "text-slate-600", label: en.login.fillAdminDemo },
+  farmer: { icon: Sprout, iconClassName: "text-emerald-600 dark:text-emerald-400", label: en.login.fillFarmerDemo },
+  officer: { icon: Users, iconClassName: "text-blue-600 dark:text-blue-400", label: en.login.fillOfficerDemo },
+  admin: { icon: ShieldCheck, iconClassName: "text-slate-600 dark:text-slate-300", label: en.login.fillAdminDemo },
 };
 
 function friendlySignInError(error: unknown): string {

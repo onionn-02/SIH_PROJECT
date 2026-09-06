@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LogOut } from "lucide-react";
+import { LogOut, Moon, Sun } from "lucide-react";
 
 import { Logo } from "@/components/shared/logo";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/config/routes";
+import { useTheme } from "@/hooks/use-theme";
 import { useTranslations } from "@/hooks/use-translations";
 import { useAuth } from "@/lib/auth/auth-context";
 import type { UserRole } from "@/types/firestore";
@@ -22,6 +23,7 @@ function roleDashboardLink(t: Translations): Record<UserRole, { href: string; la
 
 export function SiteNav() {
   const t = useTranslations();
+  const { theme, toggleTheme } = useTheme();
   const { user, profile, signOutUser } = useAuth();
   const router = useRouter();
 
@@ -43,6 +45,19 @@ export function SiteNav() {
               {link.label}
             </Link>
           ))}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={toggleTheme}
+            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {theme === "dark" ? (
+              <Sun className="size-4" aria-hidden="true" />
+            ) : (
+              <Moon className="size-4" aria-hidden="true" />
+            )}
+          </Button>
           {user && profile ? (
             <div className="flex items-center gap-2">
               <span className="hidden text-xs sm:inline">{profile.full_name}</span>

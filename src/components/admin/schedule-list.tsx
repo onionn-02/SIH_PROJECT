@@ -81,7 +81,7 @@ export function ScheduleList() {
           {actionError}
         </p>
       ) : null}
-      {feedback ? <p className="text-sm text-emerald-600">{feedback}</p> : null}
+      {feedback ? <p className="text-sm text-emerald-600 dark:text-emerald-400">{feedback}</p> : null}
       <ul className="space-y-3">
         {schedules.map((schedule) => (
           <li key={schedule.id}>

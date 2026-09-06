@@ -54,7 +54,7 @@ export function AvailableSchedules() {
           {actionError}
         </p>
       ) : null}
-      {feedback ? <p className="text-sm text-emerald-600">{feedback}</p> : null}
+      {feedback ? <p className="text-sm text-emerald-600 dark:text-emerald-400">{feedback}</p> : null}
 
       {loading ? (
         <Skeleton className="h-24 w-full" />

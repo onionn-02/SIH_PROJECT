@@ -93,7 +93,7 @@ export function AnnouncementForm() {
             />
           </div>
           {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
-          {result ? <p className="text-sm text-emerald-600">{result}</p> : null}
+          {result ? <p className="text-sm text-emerald-600 dark:text-emerald-400">{result}</p> : null}
           <Button type="submit" disabled={sending}>
             {sending ? en.admin.announcementSending : en.admin.announcementSend}
           </Button>

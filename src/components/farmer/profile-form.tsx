@@ -112,7 +112,7 @@ export function ProfileForm({ profile, email }: { profile: Profile; email: strin
               {error}
             </p>
           ) : null}
-          {saved ? <p className="text-sm text-emerald-600">{t.farmer.profile.saved}</p> : null}
+          {saved ? <p className="text-sm text-emerald-600 dark:text-emerald-400">{t.farmer.profile.saved}</p> : null}
 
           <Button type="submit" disabled={saving}>
             {saving ? t.farmer.profile.saving : t.farmer.profile.save}
