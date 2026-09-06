@@ -76,12 +76,20 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow write: if isAdmin();
       // A farmer booking a slot bumps booked_count by exactly 1, never past
-      // capacity, and touches no other field (src/services/booking.ts).
+      // capacity (src/services/booking.ts bookAppointment); cancelling their
+      // own SCHEDULED appointment (src/services/booking.ts
+      // cancelOwnAppointment) drops it back by exactly 1, never below 0.
+      // Either way, no other field is touched.
       allow update: if isSignedIn()
         && resource.data.status == 'published'
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['booked_count', 'updated_at'])
-        && request.resource.data.booked_count == bookedCountOf(resource.data) + 1
-        && request.resource.data.booked_count <= resource.data.capacity;
+        && (
+          (request.resource.data.booked_count == bookedCountOf(resource.data) + 1
+            && request.resource.data.booked_count <= resource.data.capacity)
+          ||
+          (request.resource.data.booked_count == bookedCountOf(resource.data) - 1
+            && request.resource.data.booked_count >= 0)
+        );
     }
 
     match /appointments/{appointmentId} {
@@ -100,10 +108,20 @@ service cloud.firestore {
         scheduleOf(request.resource.data.schedule_id).status == 'published' &&
         scheduleOf(request.resource.data.schedule_id).center_id == request.resource.data.center_id
       );
+      // A farmer may cancel only their own appointment, and only while it is
+      // still SCHEDULED (not yet checked in) — once an officer has moved it
+      // to WAITING, cancellation goes through the officer/queue instead so
+      // it doesn't disrupt a queue position other farmers are relying on.
       allow update: if isAdmin() || (
         isOfficerForCenter(resource.data.center_id) &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updated_at']) &&
         isValidStatusTransition(resource.data.status, request.resource.data.status)
+      ) || (
+        isSignedIn() &&
+        resource.data.farmer_id == request.auth.uid &&
+        resource.data.status == 'SCHEDULED' &&
+        request.resource.data.status == 'CANCELLED' &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updated_at'])
       );
       allow delete: if false;
     }
@@ -114,15 +132,19 @@ service cloud.firestore {
         resource.data.farmer_id == request.auth.uid ||
         isOfficerForCenter(get(/databases/$(database)/documents/appointments/$(resource.data.appointment_id)).data.center_id)
       );
-      // A farmer may self-write only the very first "booked" audit entry for
-      // their own appointment (src/services/booking.ts) — never any other
-      // transition, which must go through an officer/admin.
+      // A farmer may self-write only two audit entries for their own
+      // appointment: the initial "booked" entry (src/services/booking.ts
+      // bookAppointment) and a SCHEDULED->CANCELLED entry from cancelling it
+      // themselves (src/services/booking.ts cancelOwnAppointment) — never
+      // any other transition, which must go through an officer/admin.
       allow create: if isAdmin() ||
         isOfficerForCenter(get(/databases/$(database)/documents/appointments/$(request.resource.data.appointment_id)).data.center_id) ||
         (isSignedIn() &&
           request.resource.data.farmer_id == request.auth.uid &&
-          request.resource.data.old_status == null &&
-          request.resource.data.new_status == 'SCHEDULED');
+          (
+            (request.resource.data.old_status == null && request.resource.data.new_status == 'SCHEDULED') ||
+            (request.resource.data.old_status == 'SCHEDULED' && request.resource.data.new_status == 'CANCELLED')
+          ));
       allow update, delete: if false;
     }
 
