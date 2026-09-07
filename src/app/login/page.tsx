@@ -55,18 +55,26 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, profile, loading, signIn } = useAuth();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [signInError, setSignInError] = useState<string | null>(null);
-  const [showAllDemoLogins, setShowAllDemoLogins] = useState(false);
 
   const requestedRoleParam = searchParams.get("role");
   const requestedRole =
     requestedRoleParam && (DEMO_ROLES as string[]).includes(requestedRoleParam)
       ? (requestedRoleParam as DemoRole)
       : null;
-  const demoRolesToShow = requestedRole && !showAllDemoLogins ? [requestedRole] : DEMO_ROLES;
+
+  // Arriving from a homepage role card: pre-fill that role's demo credentials
+  // so signing back in after a sign-out is a single "Sign In" click, not a
+  // silent auto-login.
+  const [email, setEmail] = useState(requestedRole ? DEMO_ACCOUNTS[requestedRole].email : "");
+  const [password, setPassword] = useState(requestedRole ? DEMO_ACCOUNTS[requestedRole].password : "");
+  const [submitting, setSubmitting] = useState(false);
+  const [signInError, setSignInError] = useState<string | null>(null);
+  const [showAllDemoLogins, setShowAllDemoLogins] = useState(false);
+
+  // The requested role's fields are already pre-filled above, so its own
+  // "fill demo login" button would be redundant — only show it once the
+  // user asks to switch roles.
+  const demoRolesToShow = requestedRole && !showAllDemoLogins ? [] : DEMO_ROLES;
 
   const noProfileError = !loading && user && !profile ? en.login.noProfile : null;
   const error = signInError ?? noProfileError;

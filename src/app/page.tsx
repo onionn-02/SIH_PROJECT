@@ -116,12 +116,21 @@ const HOW_IT_WORKS = [
 
 export default function HomePage() {
   const router = useRouter();
-  const { signIn } = useAuth();
+  const { user, loading: authLoading, signIn } = useAuth();
   const [pendingRole, setPendingRole] = useState<DemoRole | null>(null);
   const [entryError, setEntryError] = useState<string | null>(null);
 
   async function enterAs(role: DemoRole) {
-    if (pendingRole) return;
+    if (pendingRole || authLoading) return;
+
+    // Signed out: send the user to the real login form (pre-filled with the
+    // demo credentials) instead of signing them in silently, so signing out
+    // always requires signing back in on purpose.
+    if (!user) {
+      router.push(`${ROUTES.login}?role=${role}`);
+      return;
+    }
+
     setEntryError(null);
     setPendingRole(role);
     try {
@@ -162,7 +171,7 @@ export default function HomePage() {
                 key={audience.role}
                 type="button"
                 onClick={() => enterAs(audience.role)}
-                disabled={pendingRole !== null}
+                disabled={pendingRole !== null || authLoading}
                 aria-busy={isPending}
                 className={cn(
                   "group relative flex flex-col items-start gap-1 rounded-xl bg-card p-4 text-left text-sm text-card-foreground ring-1 transition-all duration-200 ease-out",
