@@ -6,11 +6,13 @@ import Link from "next/link";
 import { AppointmentCard } from "@/components/farmer/appointment-card";
 import { FarmerTabs } from "@/components/farmer/farmer-tabs";
 import { NotificationList } from "@/components/farmer/notification-list";
+import { MarketPriceCard } from "@/components/market/market-price-card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ROUTES } from "@/config/routes";
+import { useCropPrices } from "@/hooks/use-crop-prices";
 import { useFarmerAppointments } from "@/hooks/use-farmer-appointments";
 import { useMyQueuePosition } from "@/hooks/use-my-queue-position";
 import { useNotifications } from "@/hooks/use-notifications";
@@ -18,11 +20,14 @@ import { useTranslations } from "@/hooks/use-translations";
 import { getPrimaryAppointment } from "@/lib/appointments/derive";
 import { useAuth } from "@/lib/auth/auth-context";
 
+const DASHBOARD_PRICE_LIMIT = 4;
+
 export default function FarmerDashboardPage() {
   const t = useTranslations();
   const { profile } = useAuth();
   const { appointments, loading, error } = useFarmerAppointments();
   const { notifications } = useNotifications();
+  const { prices } = useCropPrices();
 
   const appointment = getPrimaryAppointment(appointments);
   const queuePosition = useMyQueuePosition(appointment?.id ?? null, appointment?.status);
@@ -62,6 +67,27 @@ export default function FarmerDashboardPage() {
           />
         )}
       </section>
+
+      {prices.length > 0 ? (
+        <section aria-labelledby="market-rates-heading" className="mb-8">
+          <div className="mb-3 flex items-center justify-between">
+            <h2
+              id="market-rates-heading"
+              className="text-sm font-semibold tracking-wide text-muted-foreground uppercase"
+            >
+              {t.market.dashboardTitle}
+            </h2>
+            <Link href={ROUTES.farmer.marketPrices} className="text-sm font-medium text-primary hover:underline">
+              {t.market.viewAll}
+            </Link>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {prices.slice(0, DASHBOARD_PRICE_LIMIT).map((price) => (
+              <MarketPriceCard key={price.id} price={price} t={t} />
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <section aria-labelledby="notifications-heading">
         <div className="mb-3 flex items-center justify-between">

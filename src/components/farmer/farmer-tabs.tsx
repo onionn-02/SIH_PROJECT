@@ -13,6 +13,7 @@ export function FarmerTabs() {
     { href: ROUTES.farmer.dashboard, label: t.nav.farmerDashboard },
     { href: ROUTES.farmer.schedule, label: t.nav.schedule },
     { href: ROUTES.farmer.history, label: t.nav.history },
+    { href: ROUTES.farmer.marketPrices, label: t.nav.marketRates },
     {
       href: ROUTES.farmer.notifications,
       label: t.nav.notifications,

@@ -12,11 +12,13 @@ export const ROUTES = {
     history: "/farmer/history",
     notifications: "/farmer/notifications",
     profile: "/farmer/profile",
+    marketPrices: "/farmer/market-prices",
   },
   officer: {
     dashboard: "/officer/dashboard",
     queue: "/officer/queue",
     history: "/officer/history",
+    prices: "/officer/prices",
   },
   admin: {
     dashboard: "/admin/dashboard",
@@ -24,5 +26,6 @@ export const ROUTES = {
     centers: "/admin/centers",
     schedules: "/admin/schedules",
     analytics: "/admin/analytics",
+    prices: "/admin/prices",
   },
 } as const;

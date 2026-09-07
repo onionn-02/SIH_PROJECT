@@ -262,6 +262,178 @@ async function seedNotification(id: string, userId: string, title: string, messa
   });
 }
 
+interface SeedCropPrice {
+  id: string;
+  cropName: string;
+  category: "vegetable" | "fruit" | "grain" | "pulses" | "other";
+  unit: "kg" | "quintal";
+  price: number;
+  previousPrice: number | null;
+  centerId: string | null;
+  centerName: string | null;
+  updatedBy: string;
+  updatedByName: string;
+  updatedByRole: "officer" | "admin";
+}
+
+/** Crop Prices & Procurement Rates module (realistic demo data, replace with real rates later). */
+async function seedCropPrices(officerUid: string, officerName: string, adminUid: string, adminName: string) {
+  const crops: SeedCropPrice[] = [
+    {
+      id: "crop-price-onion-nashik",
+      cropName: "Onion",
+      category: "vegetable",
+      unit: "quintal",
+      price: 1850,
+      previousPrice: 1720,
+      centerId: NASHIK_ID,
+      centerName: "Nashik Krishi Mandi Procurement Center",
+      updatedBy: officerUid,
+      updatedByName: officerName,
+      updatedByRole: "officer",
+    },
+    {
+      id: "crop-price-potato-nashik",
+      cropName: "Potato",
+      category: "vegetable",
+      unit: "quintal",
+      price: 1200,
+      previousPrice: 1250,
+      centerId: NASHIK_ID,
+      centerName: "Nashik Krishi Mandi Procurement Center",
+      updatedBy: officerUid,
+      updatedByName: officerName,
+      updatedByRole: "officer",
+    },
+    {
+      id: "crop-price-tomato-pune",
+      cropName: "Tomato",
+      category: "vegetable",
+      unit: "quintal",
+      price: 2400,
+      previousPrice: 2100,
+      centerId: PUNE_ID,
+      centerName: "Pune Rural Procurement Center",
+      updatedBy: officerUid,
+      updatedByName: officerName,
+      updatedByRole: "officer",
+    },
+    {
+      id: "crop-price-soybean-pune",
+      cropName: "Soybean",
+      category: "other",
+      unit: "quintal",
+      price: 4550,
+      previousPrice: 4400,
+      centerId: PUNE_ID,
+      centerName: "Pune Rural Procurement Center",
+      updatedBy: officerUid,
+      updatedByName: officerName,
+      updatedByRole: "officer",
+    },
+    {
+      id: "crop-price-wheat-statewide",
+      cropName: "Wheat",
+      category: "grain",
+      unit: "quintal",
+      price: 2275,
+      previousPrice: 2150,
+      centerId: null,
+      centerName: null,
+      updatedBy: adminUid,
+      updatedByName: adminName,
+      updatedByRole: "admin",
+    },
+    {
+      id: "crop-price-rice-statewide",
+      cropName: "Rice",
+      category: "grain",
+      unit: "quintal",
+      price: 2300,
+      previousPrice: 2300,
+      centerId: null,
+      centerName: null,
+      updatedBy: adminUid,
+      updatedByName: adminName,
+      updatedByRole: "admin",
+    },
+    {
+      id: "crop-price-cotton-statewide",
+      cropName: "Cotton",
+      category: "other",
+      unit: "quintal",
+      price: 7000,
+      previousPrice: 6800,
+      centerId: null,
+      centerName: null,
+      updatedBy: adminUid,
+      updatedByName: adminName,
+      updatedByRole: "admin",
+    },
+  ];
+
+  // A previous reseed's real UI edits could have added price_history entries
+  // beyond what this script writes below — clear them first so a reset is a
+  // true reset (same reasoning as clearStaleDemoData above).
+  const historySnapshot = await db
+    .collection("price_history")
+    .where("crop_price_id", "in", crops.map((c) => c.id))
+    .get();
+  if (!historySnapshot.empty) {
+    const deleteBatch = db.batch();
+    for (const doc of historySnapshot.docs) deleteBatch.delete(doc.ref);
+    await deleteBatch.commit();
+  }
+
+  for (const crop of crops) {
+    const now = Timestamp.now();
+    await db.doc(`crop_prices/${crop.id}`).set({
+      crop_name: crop.cropName,
+      category: crop.category,
+      unit: crop.unit,
+      price: crop.price,
+      previous_price: crop.previousPrice,
+      center_id: crop.centerId,
+      center_name: crop.centerName,
+      effective_date: dateKey(today),
+      updated_by: crop.updatedBy,
+      updated_by_name: crop.updatedByName,
+      updated_by_role: crop.updatedByRole,
+      created_at: now,
+      updated_at: now,
+    });
+
+    if (crop.previousPrice !== null) {
+      await db.doc(`price_history/ph-${crop.id}-0`).set({
+        crop_price_id: crop.id,
+        crop_name: crop.cropName,
+        unit: crop.unit,
+        previous_price: null,
+        new_price: crop.previousPrice,
+        center_id: crop.centerId,
+        center_name: crop.centerName,
+        changed_by: crop.updatedBy,
+        changed_by_name: crop.updatedByName,
+        changed_by_role: crop.updatedByRole,
+        created_at: Timestamp.fromDate(daysFromToday(-6)),
+      });
+    }
+    await db.doc(`price_history/ph-${crop.id}-1`).set({
+      crop_price_id: crop.id,
+      crop_name: crop.cropName,
+      unit: crop.unit,
+      previous_price: crop.previousPrice,
+      new_price: crop.price,
+      center_id: crop.centerId,
+      center_name: crop.centerName,
+      changed_by: crop.updatedBy,
+      changed_by_name: crop.updatedByName,
+      changed_by_role: crop.updatedByRole,
+      created_at: Timestamp.fromDate(minutesBefore(today, 90)),
+    });
+  }
+}
+
 async function main() {
   console.log("Seeding demo data into project:", projectId);
 
@@ -473,6 +645,8 @@ async function main() {
     daysFromToday(-16),
     true
   );
+
+  await seedCropPrices(officerUid, "Suman Kulkarni", adminUid, "Admin User");
 
   console.log("Seed complete.");
   console.log("Demo logins:");

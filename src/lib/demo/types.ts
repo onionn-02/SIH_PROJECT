@@ -6,8 +6,10 @@
  */
 import type {
   AppointmentStatus,
+  CropCategory,
   NotificationType,
   PaymentStatus,
+  PriceUnit,
   ScheduleStatus,
   UserRole,
 } from "@/types/firestore";
@@ -116,4 +118,40 @@ export interface BookableSchedule {
   capacity: number;
   bookedCount: number;
   slotsRemaining: number;
+}
+
+/**
+ * View model for a crop's current procurement rate ("Crop Prices &
+ * Procurement Rates" module). Used both read-only (farmer) and as the row
+ * shape in the officer/admin management table.
+ */
+export interface MarketPrice {
+  id: string;
+  cropName: string;
+  category: CropCategory;
+  unit: PriceUnit;
+  price: number;
+  previousPrice: number | null;
+  centerId: string | null;
+  /** Null when this price applies state-wide (every center). */
+  centerName: string | null;
+  /** Raw "YYYY-MM-DD", suitable for an `<input type="date">` when editing. */
+  effectiveDate: string;
+  effectiveDateLabel: string;
+  updatedAtLabel: string;
+  updatedByName: string;
+  updatedByRole: "officer" | "admin";
+}
+
+/** One entry in the crop-price audit trail. */
+export interface PriceHistoryItem {
+  id: string;
+  cropName: string;
+  unit: PriceUnit;
+  previousPrice: number | null;
+  newPrice: number;
+  centerName: string | null;
+  changedByName: string;
+  changedByRole: "officer" | "admin";
+  changedAtLabel: string;
 }

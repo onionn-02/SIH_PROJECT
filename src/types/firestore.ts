@@ -159,6 +159,52 @@ export interface Payment {
   created_at: Timestamp;
 }
 
+export type PriceUnit = "kg" | "quintal";
+
+export type CropCategory = "vegetable" | "fruit" | "grain" | "pulses" | "other";
+
+/**
+ * crop_prices/{cropPriceId} — current procurement rate for one crop, at
+ * either a specific center (`center_id` set) or state-wide (`center_id`
+ * null, `center_name` null). `previous_price` is carried on the *current*
+ * doc (not just in `price_history`) so the farmer-facing card can show an
+ * up/down trend without a second read.
+ */
+export interface CropPrice {
+  crop_name: string;
+  category: CropCategory;
+  unit: PriceUnit;
+  price: number;
+  previous_price: number | null;
+  center_id: string | null;
+  center_name: string | null;
+  effective_date: string; // "YYYY-MM-DD"
+  updated_by: string; // uid
+  updated_by_name: string;
+  updated_by_role: "officer" | "admin";
+  created_at: Timestamp;
+  updated_at: Timestamp;
+}
+
+/**
+ * price_history/{id} — append-only audit trail of price *changes* (mirrors
+ * status_history's old/new + changed_by shape). Only written when a save
+ * actually changes the price, not on every metadata edit.
+ */
+export interface PriceHistoryEntry {
+  crop_price_id: string;
+  crop_name: string;
+  unit: PriceUnit;
+  previous_price: number | null;
+  new_price: number;
+  center_id: string | null;
+  center_name: string | null;
+  changed_by: string; // uid
+  changed_by_name: string;
+  changed_by_role: "officer" | "admin";
+  created_at: Timestamp;
+}
+
 export interface FirestoreCollections {
   profiles: Profile;
   procurement_centers: ProcurementCenter;
@@ -168,4 +214,6 @@ export interface FirestoreCollections {
   notifications: AppNotification;
   status_history: StatusHistoryEntry;
   payments: Payment;
+  crop_prices: CropPrice;
+  price_history: PriceHistoryEntry;
 }

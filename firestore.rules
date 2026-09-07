@@ -174,6 +174,41 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    /**
+     * Crop Prices & Procurement Rates module. Prices are not sensitive
+     * per-user data (unlike appointments), so any signed-in user — farmer,
+     * officer or admin — can read the full list. Writes are scoped:
+     * - Admin: full control, any center or state-wide (center_id null).
+     * - Officer: create/update only a price scoped to one of their own
+     *   assigned centers (never state-wide, never someone else's center).
+     * - Delete is admin-only.
+     */
+    match /crop_prices/{priceId} {
+      allow read: if isSignedIn();
+      allow create: if isAdmin() || (
+        isSignedIn() && myProfile().role == 'officer' &&
+        request.resource.data.center_id != null &&
+        isOfficerForCenter(request.resource.data.center_id)
+      );
+      allow update: if isAdmin() || (
+        isSignedIn() && myProfile().role == 'officer' &&
+        resource.data.center_id != null && isOfficerForCenter(resource.data.center_id) &&
+        request.resource.data.center_id != null && isOfficerForCenter(request.resource.data.center_id)
+      );
+      allow delete: if isAdmin();
+    }
+
+    /** Append-only audit trail for crop_prices — same write scoping as above, never editable/deletable. */
+    match /price_history/{id} {
+      allow read: if isSignedIn();
+      allow create: if isAdmin() || (
+        isSignedIn() && myProfile().role == 'officer' &&
+        request.resource.data.center_id != null &&
+        isOfficerForCenter(request.resource.data.center_id)
+      );
+      allow update, delete: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
