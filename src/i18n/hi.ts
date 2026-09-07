@@ -56,6 +56,7 @@ export const hi: Translations = {
     allNotifications: "सभी सूचनाएं",
     allNotificationsDescription: "आपकी अपॉइंटमेंट और केंद्रों से जुड़ी हर जानकारी।",
     noNotifications: "अभी तक कोई सूचना नहीं है।",
+    unreadNotifications: (n: number) => `${n} न पढ़ी गई सूचना${n === 1 ? "" : "एं"}`,
     instructions: "क्या लाएं / आगे क्या करें",
     appointmentNotFound: "हमें वह अपॉइंटमेंट नहीं मिली।",
     appointmentNotFoundHint: "हो सकता है इसे हटा दिया गया हो, या लिंक गलत हो।",

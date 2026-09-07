@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { LogOut, Moon, Sun } from "lucide-react";
 
 import { Logo } from "@/components/shared/logo";
@@ -10,6 +10,7 @@ import { ROUTES } from "@/config/routes";
 import { useTheme } from "@/hooks/use-theme";
 import { useTranslations } from "@/hooks/use-translations";
 import { useAuth } from "@/lib/auth/auth-context";
+import { cn } from "@/lib/utils";
 import type { UserRole } from "@/types/firestore";
 import type { Translations } from "@/i18n/en";
 
@@ -26,6 +27,7 @@ export function SiteNav() {
   const { theme, toggleTheme } = useTheme();
   const { user, profile, signOutUser } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   const links = [
     ...(profile ? [roleDashboardLink(t)[profile.role]] : []),
@@ -33,18 +35,25 @@ export function SiteNav() {
   ];
 
   return (
-    <header className="border-b bg-background">
+    <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur-sm supports-backdrop-filter:bg-background/60">
       <nav className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
         <Link href={ROUTES.home} className="flex items-center gap-2 text-sm font-semibold">
           <Logo size={28} />
           {t.app.name}
         </Link>
         <div className="flex items-center gap-4 text-sm text-muted-foreground">
-          {links.map((link) => (
-            <Link key={link.href} href={link.href} className="hover:text-foreground">
-              {link.label}
-            </Link>
-          ))}
+          {links.map((link) => {
+            const active = pathname === link.href || pathname?.startsWith(`${link.href}/`);
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={cn("hover:text-foreground", active && "font-medium text-foreground")}
+              >
+                {link.label}
+              </Link>
+            );
+          })}
           <Button
             type="button"
             variant="ghost"
@@ -76,7 +85,7 @@ export function SiteNav() {
             </div>
           ) : (
             <Link
-              href={ROUTES.login}
+              href={pathname === ROUTES.home ? "#choose-role" : `${ROUTES.home}#choose-role`}
               className="rounded-md bg-primary px-3 py-1.5 text-primary-foreground hover:opacity-90"
             >
               {t.nav.login}

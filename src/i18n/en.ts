@@ -55,6 +55,7 @@ export const en = {
     allNotifications: "All Notifications",
     allNotificationsDescription: "Every update about your appointments and centers.",
     noNotifications: "No notifications yet.",
+    unreadNotifications: (n: number) => `${n} unread notification${n === 1 ? "" : "s"}`,
     instructions: "What to bring / do next",
     appointmentNotFound: "We couldn't find that appointment.",
     appointmentNotFoundHint: "It may have been removed, or the link is incorrect.",

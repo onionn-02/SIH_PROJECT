@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, CalendarDays } from "lucide-react";
+import { AlertTriangle, CalendarDays, Sprout } from "lucide-react";
 import Link from "next/link";
 
 import { AppointmentCard } from "@/components/farmer/appointment-card";
@@ -34,6 +34,7 @@ export default function FarmerDashboardPage() {
       <PageHeader
         title={`${t.farmer.greeting}, ${profile?.full_name.split(" ")[0] ?? ""}`}
         description={t.farmer.dashboardDescription}
+        icon={Sprout}
       />
 
       <section aria-labelledby="upcoming-heading" className="mb-8">
@@ -54,7 +55,7 @@ export default function FarmerDashboardPage() {
             icon={CalendarDays}
             title={t.farmer.noUpcomingAppointment}
             action={
-              <Button render={<Link href={ROUTES.farmer.schedule} />} className="mt-2">
+              <Button render={<Link href={ROUTES.farmer.schedule} />} nativeButton={false} className="mt-2">
                 {t.nav.schedule}
               </Button>
             }

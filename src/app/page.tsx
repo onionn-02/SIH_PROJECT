@@ -1,43 +1,100 @@
-import Link from "next/link";
-import { CalendarCheck2, ClipboardCheck, ShieldCheck, Sprout, Users } from "lucide-react";
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { FirebaseError } from "firebase/app";
+import { CalendarCheck2, ClipboardCheck, Loader2, ShieldCheck, Sprout, Users } from "lucide-react";
 
 import { Logo } from "@/components/shared/logo";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ROUTES } from "@/config/routes";
+import { en } from "@/i18n/en";
+import { useAuth } from "@/lib/auth/auth-context";
+import { DEMO_ACCOUNTS } from "@/lib/demo/demo-accounts";
 import { cn } from "@/lib/utils";
 
-const AUDIENCES = [
+type DemoRole = "farmer" | "officer" | "admin";
+
+const AUDIENCES: {
+  role: DemoRole;
+  title: string;
+  description: string;
+  cta: string;
+  icon: typeof Sprout;
+  accent: string;
+  highlight: boolean;
+}[] = [
   {
     role: "farmer",
     title: "I'm a farmer",
     description: "See your appointment, token and live queue position.",
-    cta: "Go to farmer dashboard →",
+    cta: "Enter farmer dashboard",
     icon: Sprout,
-    iconClassName: "text-emerald-600 dark:text-emerald-300",
-    iconBgClassName: "bg-emerald-50 dark:bg-emerald-500/15",
+    accent: "emerald",
     highlight: true,
   },
   {
     role: "officer",
     title: "I'm an officer",
     description: "Manage today's queue and update procurement status.",
-    cta: "Go to officer dashboard →",
+    cta: "Enter officer dashboard",
     icon: Users,
-    iconClassName: "text-blue-600 dark:text-blue-300",
-    iconBgClassName: "bg-blue-50 dark:bg-blue-500/15",
+    accent: "blue",
     highlight: false,
   },
   {
     role: "admin",
     title: "I'm an administrator",
     description: "Manage centers, schedules and view operational analytics.",
-    cta: "Go to admin dashboard →",
+    cta: "Enter admin dashboard",
     icon: ShieldCheck,
-    iconClassName: "text-slate-600 dark:text-slate-300",
-    iconBgClassName: "bg-slate-100 dark:bg-slate-500/15",
+    accent: "slate",
     highlight: false,
   },
-] as const;
+];
+
+const ACCENT_CLASSES: Record<
+  string,
+  { iconBg: string; icon: string; ring: string; glow: string }
+> = {
+  emerald: {
+    iconBg: "bg-emerald-50 dark:bg-emerald-500/15",
+    icon: "text-emerald-600 dark:text-emerald-300",
+    ring: "ring-emerald-600/25 hover:ring-emerald-600/50 dark:ring-emerald-400/20 dark:hover:ring-emerald-400/40",
+    glow: "hover:shadow-emerald-600/20 dark:hover:shadow-emerald-400/10",
+  },
+  blue: {
+    iconBg: "bg-blue-50 dark:bg-blue-500/15",
+    icon: "text-blue-600 dark:text-blue-300",
+    ring: "ring-foreground/10 hover:ring-blue-600/40 dark:hover:ring-blue-400/40",
+    glow: "hover:shadow-blue-600/20 dark:hover:shadow-blue-400/10",
+  },
+  slate: {
+    iconBg: "bg-slate-100 dark:bg-slate-500/15",
+    icon: "text-slate-600 dark:text-slate-300",
+    ring: "ring-foreground/10 hover:ring-slate-500/40 dark:hover:ring-slate-300/40",
+    glow: "hover:shadow-slate-500/20 dark:hover:shadow-slate-300/10",
+  },
+};
+
+const DASHBOARD_ROUTE: Record<DemoRole, string> = {
+  farmer: ROUTES.farmer.dashboard,
+  officer: ROUTES.officer.dashboard,
+  admin: ROUTES.admin.dashboard,
+};
+
+function friendlyEntryError(error: unknown): string {
+  if (error instanceof FirebaseError) {
+    switch (error.code) {
+      case "auth/invalid-credential":
+      case "auth/wrong-password":
+      case "auth/user-not-found":
+        return en.login.invalidCredentials;
+      case "auth/too-many-requests":
+        return en.login.tooManyAttempts;
+    }
+  }
+  return en.login.genericError;
+}
 
 const HOW_IT_WORKS = [
   {
@@ -58,6 +115,25 @@ const HOW_IT_WORKS = [
 ] as const;
 
 export default function HomePage() {
+  const router = useRouter();
+  const { signIn } = useAuth();
+  const [pendingRole, setPendingRole] = useState<DemoRole | null>(null);
+  const [entryError, setEntryError] = useState<string | null>(null);
+
+  async function enterAs(role: DemoRole) {
+    if (pendingRole) return;
+    setEntryError(null);
+    setPendingRole(role);
+    try {
+      const { email, password } = DEMO_ACCOUNTS[role];
+      await signIn(email, password);
+      router.push(DASHBOARD_ROUTE[role]);
+    } catch (err) {
+      setEntryError(friendlyEntryError(err));
+      setPendingRole(null);
+    }
+  }
+
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-16 px-4 py-12">
       <div className="relative overflow-hidden rounded-3xl border bg-gradient-to-b from-emerald-50 via-emerald-50/40 to-background px-6 py-14 text-center sm:py-20 dark:from-emerald-500/10 dark:via-emerald-500/5">
@@ -75,39 +151,62 @@ export default function HomePage() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        {AUDIENCES.map((audience) => (
-          <Card
-            key={audience.role}
-            className={cn(
-              "transition-all hover:-translate-y-0.5 hover:shadow-md",
-              audience.highlight
-                ? "ring-2 ring-emerald-600/25 hover:ring-emerald-600/40 dark:ring-emerald-400/20"
-                : "hover:ring-foreground/15"
-            )}
-          >
-            <CardHeader>
-              <div
+      <div id="choose-role" className="scroll-mt-20 space-y-3">
+        <div className="grid gap-4 sm:grid-cols-3">
+          {AUDIENCES.map((audience) => {
+            const accent = ACCENT_CLASSES[audience.accent];
+            const isPending = pendingRole === audience.role;
+            const isDisabled = pendingRole !== null && !isPending;
+            return (
+              <button
+                key={audience.role}
+                type="button"
+                onClick={() => enterAs(audience.role)}
+                disabled={pendingRole !== null}
+                aria-busy={isPending}
                 className={cn(
-                  "mb-1 flex size-10 items-center justify-center rounded-full",
-                  audience.iconBgClassName
+                  "group relative flex flex-col items-start gap-1 rounded-xl bg-card p-4 text-left text-sm text-card-foreground ring-1 transition-all duration-200 ease-out",
+                  "hover:-translate-y-1 hover:shadow-lg active:translate-y-0 active:scale-[0.98] active:shadow-md",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                  "disabled:pointer-events-none",
+                  audience.highlight ? "ring-2 ring-emerald-600/25 dark:ring-emerald-400/20" : "ring-foreground/10",
+                  accent.ring,
+                  accent.glow,
+                  isPending && "-translate-y-1 shadow-lg",
+                  isDisabled && "opacity-40"
                 )}
               >
-                <audience.icon className={cn("size-5", audience.iconClassName)} aria-hidden="true" />
-              </div>
-              <CardTitle className="text-base">{audience.title}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="mb-4 text-sm text-muted-foreground">{audience.description}</p>
-              <Link
-                href={`${ROUTES.login}?role=${audience.role}`}
-                className="text-sm font-medium text-primary hover:underline"
-              >
-                {audience.cta}
-              </Link>
-            </CardContent>
-          </Card>
-        ))}
+                <div
+                  className={cn(
+                    "mb-1 flex size-10 items-center justify-center rounded-full transition-transform duration-200 group-hover:scale-110",
+                    accent.iconBg
+                  )}
+                >
+                  {isPending ? (
+                    <Loader2 className={cn("size-5 animate-spin", accent.icon)} aria-hidden="true" />
+                  ) : (
+                    <audience.icon className={cn("size-5", accent.icon)} aria-hidden="true" />
+                  )}
+                </div>
+                <p className="font-heading text-base leading-snug font-medium">{audience.title}</p>
+                <p className="mb-3 text-sm text-muted-foreground">{audience.description}</p>
+                <span className="inline-flex items-center gap-1 text-sm font-medium text-primary">
+                  {isPending ? en.login.signingIn : audience.cta}
+                  {!isPending && (
+                    <span className="transition-transform duration-200 group-hover:translate-x-1" aria-hidden="true">
+                      →
+                    </span>
+                  )}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        {entryError ? (
+          <p role="alert" className="text-center text-sm text-destructive">
+            {entryError}
+          </p>
+        ) : null}
       </div>
 
       <div className="border-t pt-10">

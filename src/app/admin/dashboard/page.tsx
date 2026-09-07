@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, ShieldCheck } from "lucide-react";
 
 import { AdminTabs } from "@/components/admin/admin-tabs";
 import { AnnouncementForm } from "@/components/admin/announcement-form";
@@ -16,7 +16,7 @@ export default function AdminDashboardPage() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
       <AdminTabs />
-      <PageHeader title={en.nav.adminDashboard} description={en.admin.dashboardDescription} />
+      <PageHeader title={en.nav.adminDashboard} description={en.admin.dashboardDescription} icon={ShieldCheck} />
 
       {error ? (
         <EmptyState icon={AlertTriangle} title="Couldn't load dashboard data" description={error} />

@@ -56,6 +56,7 @@ export const mr: Translations = {
     allNotifications: "सर्व सूचना",
     allNotificationsDescription: "तुमच्या भेटी आणि केंद्रांबद्दलची प्रत्येक माहिती.",
     noNotifications: "अद्याप कोणतीही सूचना नाही.",
+    unreadNotifications: (n: number) => `${n} ${n === 1 ? "न वाचलेली सूचना" : "न वाचलेल्या सूचना"}`,
     instructions: "काय आणावे / पुढे काय करावे",
     appointmentNotFound: "आम्हाला ती भेट सापडली नाही.",
     appointmentNotFoundHint: "कदाचित ती काढून टाकली असेल, किंवा लिंक चुकीची असेल.",

@@ -1,3 +1,5 @@
+import { Users } from "lucide-react";
+
 import { NextFarmerCard } from "@/components/officer/next-farmer-card";
 import { OfficerTabs } from "@/components/officer/officer-tabs";
 import { SummaryCards } from "@/components/officer/summary-cards";
@@ -11,6 +13,7 @@ export default function OfficerDashboardPage() {
       <PageHeader
         title={en.nav.officerDashboard}
         description="Today's summary and the next farmer to call."
+        icon={Users}
       />
 
       <div className="mb-6">
