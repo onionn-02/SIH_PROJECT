@@ -493,6 +493,23 @@ async function main() {
     await seedAppointment(appointment);
   }
 
+  // Give every other seeded queue farmer a real `profiles` document (role:
+  // "farmer", no Firebase Auth account since they never need to log in) so
+  // the admin dashboard's farmer count (CLAUDE.md §9) reflects the actual
+  // seeded population instead of only the one hero account that can sign in.
+  for (const appointment of queue) {
+    if (appointment.farmerId === farmerUid) continue;
+    await db.doc(`profiles/${appointment.farmerId}`).set({
+      full_name: appointment.farmerName,
+      phone: appointment.farmerPhone,
+      role: "farmer",
+      preferred_language: "en",
+      assigned_center_ids: [],
+      created_at: now,
+      updated_at: now,
+    });
+  }
+
   // --- The hero farmer's own upcoming + past appointments ---
   const puneUpcoming = daysFromToday(5);
   await seedAppointment({

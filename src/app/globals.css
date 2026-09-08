@@ -49,6 +49,7 @@
 }
 
 :root {
+  color-scheme: light;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -84,6 +85,7 @@
 }
 
 .dark {
+  color-scheme: dark;
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
@@ -126,5 +128,17 @@
   }
   html {
     @apply font-sans;
+  }
+  /* `color-scheme` alone isn't reliably honored by the native <select>
+     popup on Windows Chrome, which keeps a light listbox even in dark
+     mode — set explicit colors on select/option so the popup always
+     matches the theme regardless of OS/browser quirks. */
+  select {
+    background-color: var(--background);
+    color: var(--foreground);
+  }
+  select option {
+    background-color: var(--background);
+    color: var(--foreground);
   }
 }
