@@ -20,7 +20,6 @@ export function FarmerTabs() {
       count: unreadCount,
       countLabel: t.farmer.unreadNotifications(unreadCount),
     },
-    { href: ROUTES.farmer.profile, label: t.nav.profile },
   ];
   return <SectionTabs tabs={tabs} ariaLabel="Farmer sections" />;
 }

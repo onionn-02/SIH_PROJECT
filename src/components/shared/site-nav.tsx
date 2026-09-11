@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LogOut, Moon, Sun } from "lucide-react";
 
+import { FarmerUserMenu } from "@/components/farmer/farmer-user-menu";
 import { Logo } from "@/components/shared/logo";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/config/routes";
@@ -68,21 +69,25 @@ export function SiteNav() {
             )}
           </Button>
           {user && profile ? (
-            <div className="flex items-center gap-2">
-              <span className="hidden text-xs sm:inline">{profile.full_name}</span>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={async () => {
-                  await signOutUser();
-                  router.push(ROUTES.home);
-                }}
-              >
-                <LogOut className="size-4" aria-hidden="true" />
-                {t.nav.signOut}
-              </Button>
-            </div>
+            profile.role === "farmer" ? (
+              <FarmerUserMenu />
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className="hidden text-xs sm:inline">{profile.full_name}</span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    await signOutUser();
+                    router.push(ROUTES.home);
+                  }}
+                >
+                  <LogOut className="size-4" aria-hidden="true" />
+                  {t.nav.signOut}
+                </Button>
+              </div>
+            )
           ) : (
             <Link
               href={pathname === ROUTES.home ? "#choose-role" : `${ROUTES.home}#choose-role`}
