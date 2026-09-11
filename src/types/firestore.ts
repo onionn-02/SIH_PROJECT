@@ -205,6 +205,29 @@ export interface PriceHistoryEntry {
   created_at: Timestamp;
 }
 
+/**
+ * price_snapshots/{cropPriceId_date} — one price-per-crop-per-calendar-day,
+ * so the "Compare" view can answer "what was this crop's price on date X"
+ * with a direct lookup instead of scanning price_history. Keyed by a
+ * deterministic `${cropPriceId}_${date}` id so re-saving the same
+ * effective_date overwrites that day's snapshot rather than duplicating it.
+ * Written alongside every crop_prices create/update (see services/crop-prices.ts).
+ */
+export interface PriceSnapshot {
+  crop_price_id: string;
+  crop_name: string;
+  category: CropCategory;
+  unit: PriceUnit;
+  price: number;
+  center_id: string | null;
+  center_name: string | null;
+  date: string; // "YYYY-MM-DD" — the price's effective_date when this was recorded
+  recorded_by: string; // uid
+  recorded_by_name: string;
+  recorded_by_role: "officer" | "admin";
+  created_at: Timestamp;
+}
+
 export interface FirestoreCollections {
   profiles: Profile;
   procurement_centers: ProcurementCenter;
@@ -216,4 +239,5 @@ export interface FirestoreCollections {
   payments: Payment;
   crop_prices: CropPrice;
   price_history: PriceHistoryEntry;
+  price_snapshots: PriceSnapshot;
 }

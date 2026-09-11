@@ -19,6 +19,12 @@ export function todayDateKey(date: Date = new Date()): string {
   return `${y}-${m}-${d}`;
 }
 
+/** Adds (or subtracts, with a negative n) whole days to a "YYYY-MM-DD" key. */
+export function addDaysToDateKey(dateKey: string, n: number): string {
+  const [y, m, d] = dateKey.split("-").map(Number);
+  return todayDateKey(new Date(y, m - 1, d + n));
+}
+
 /** "Today, 4 Sep 2026" if dateKey is today, else "4 Sep 2026". */
 export function formatDateLabel(dateKey: string): string {
   const [y, m, d] = dateKey.split("-").map(Number);

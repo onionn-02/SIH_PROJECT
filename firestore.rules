@@ -209,6 +209,23 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    /**
+     * One price-per-crop-per-day, written alongside every crop_prices
+     * create/update so the "Compare" view can look up "what was this crop's
+     * price on date X" directly. Same write scoping as crop_prices; a
+     * same-day resave is an update (deterministic doc id), so both create
+     * and update need the same check. Never deletable — it's history.
+     */
+    match /price_snapshots/{id} {
+      allow read: if isSignedIn();
+      allow create, update: if isAdmin() || (
+        isSignedIn() && myProfile().role == 'officer' &&
+        request.resource.data.center_id != null &&
+        isOfficerForCenter(request.resource.data.center_id)
+      );
+      allow delete: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

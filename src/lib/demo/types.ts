@@ -155,3 +155,30 @@ export interface PriceHistoryItem {
   changedByRole: "officer" | "admin";
   changedAtLabel: string;
 }
+
+/**
+ * One side of a price comparison. `date`/`price` are the most recent price
+ * recorded at or before `requestedDate` — earlier than requested whenever
+ * nothing changed in between, null when no price was ever recorded that
+ * far back (e.g. the crop was added more recently than the requested date).
+ */
+export interface PriceComparisonPoint {
+  requestedDate: string;
+  date: string | null;
+  dateLabel: string | null;
+  price: number | null;
+}
+
+/** A single crop's price on two dates, for the Market Rates "Compare" view. */
+export interface PriceComparison {
+  cropPriceId: string;
+  cropName: string;
+  category: CropCategory;
+  unit: PriceUnit;
+  centerName: string | null;
+  from: PriceComparisonPoint;
+  to: PriceComparisonPoint;
+  diff: number | null;
+  pct: number | null;
+  trend: "up" | "down" | "same" | null;
+}

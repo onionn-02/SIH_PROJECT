@@ -276,6 +276,51 @@ interface SeedCropPrice {
   updatedByRole: "officer" | "admin";
 }
 
+// --- deterministic pseudo-random price history, so the "Compare" feature
+// has ~5 weeks of believable daily data from the first seed run, without
+// depending on any external randomness (a reseed produces the same series). ---
+function hashSeed(str: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+function mulberry32(seed: number) {
+  let state = seed;
+  return () => {
+    state = (state + 0x6d2b79f5) | 0;
+    let t = Math.imul(state ^ (state >>> 15), 1 | state);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+interface PriceHistoryPoint {
+  date: Date;
+  dateStr: string;
+  price: number;
+}
+
+/** ~5 weeks of daily prices ending exactly at `endPrice` (today's seeded price), walking backwards with small deterministic day-to-day noise. */
+function buildPriceHistorySeries(cropId: string, endPrice: number, days = 35): PriceHistoryPoint[] {
+  const rng = mulberry32(hashSeed(cropId));
+  const volatility = Math.max(endPrice * 0.015, 10);
+  const series: PriceHistoryPoint[] = [];
+  let price = endPrice;
+
+  for (let offset = 0; offset >= -days; offset--) {
+    const date = daysFromToday(offset);
+    series.push({ date, dateStr: dateKey(date), price: Math.round(price / 5) * 5 });
+    price += (rng() - 0.5) * volatility * 2;
+    price += (endPrice - price) * 0.04; // gentle pull back toward the current price
+    price = Math.max(endPrice * 0.6, Math.min(endPrice * 1.5, price));
+  }
+
+  return series.reverse();
+}
+
 /** Crop Prices & Procurement Rates module (realistic demo data, replace with real rates later). */
 async function seedCropPrices(officerUid: string, officerName: string, adminUid: string, adminName: string) {
   const crops: SeedCropPrice[] = [
@@ -385,6 +430,21 @@ async function seedCropPrices(officerUid: string, officerName: string, adminUid:
     await deleteBatch.commit();
   }
 
+  // Same reset guarantee for price_snapshots (the "Compare" feature's daily
+  // data) — deterministic doc ids make same-day reseeds idempotent anyway,
+  // but this also clears anything from a previous run's different day count.
+  const snapshotsSnapshot = await db
+    .collection("price_snapshots")
+    .where("crop_price_id", "in", crops.map((c) => c.id))
+    .get();
+  if (!snapshotsSnapshot.empty) {
+    const deleteBatch = db.batch();
+    for (const doc of snapshotsSnapshot.docs) deleteBatch.delete(doc.ref);
+    await deleteBatch.commit();
+  }
+
+  const snapshotBatch = db.batch();
+
   for (const crop of crops) {
     const now = Timestamp.now();
     await db.doc(`crop_prices/${crop.id}`).set({
@@ -431,7 +491,26 @@ async function seedCropPrices(officerUid: string, officerName: string, adminUid:
       changed_by_role: crop.updatedByRole,
       created_at: Timestamp.fromDate(minutesBefore(today, 90)),
     });
+
+    for (const point of buildPriceHistorySeries(crop.id, crop.price)) {
+      snapshotBatch.set(db.doc(`price_snapshots/${crop.id}_${point.dateStr}`), {
+        crop_price_id: crop.id,
+        crop_name: crop.cropName,
+        category: crop.category,
+        unit: crop.unit,
+        price: point.price,
+        center_id: crop.centerId,
+        center_name: crop.centerName,
+        date: point.dateStr,
+        recorded_by: crop.updatedBy,
+        recorded_by_name: crop.updatedByName,
+        recorded_by_role: crop.updatedByRole,
+        created_at: Timestamp.fromDate(point.date),
+      });
+    }
   }
+
+  await snapshotBatch.commit();
 }
 
 async function main() {

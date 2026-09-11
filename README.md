@@ -55,7 +55,12 @@ src/
    or service-account JSON.**
 4. Paste the contents of `firestore.rules` into the Firestore "Rules" tab
    in the Firebase Console and publish.
-5. Run `npm run seed` to create the demo accounts and demo data described
+5. In Firestore → Indexes → Composite, add an index for `price_snapshots`
+   (fields: `crop_price_id` Ascending, `date` Descending) — this powers the
+   Market Rates "Compare" view's date lookups. Firestore also offers this
+   automatically via a link in the console error the first time an
+   unindexed query runs, if you'd rather create it that way.
+6. Run `npm run seed` to create the demo accounts and demo data described
    below.
 
 ### Demo accounts (created by `npm run seed`)
@@ -75,7 +80,8 @@ the demo" command.
 See `src/types/firestore.ts` for the Firestore collection schema
 (`profiles`, `procurement_centers`, `procurement_schedules`,
 `appointments`, `procurement_records`, `notifications`,
-`status_history`, `payments`) and `CLAUDE.md` §10 for the rationale.
+`status_history`, `payments`, `crop_prices`, `price_history`,
+`price_snapshots`) and `CLAUDE.md` §10 for the rationale.
 
 ## Build status
 

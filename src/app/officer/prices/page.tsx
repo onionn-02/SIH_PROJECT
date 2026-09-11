@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 
 import { OfficerTabs } from "@/components/officer/officer-tabs";
 import { CropPriceTable } from "@/components/market/crop-price-table";
+import { PriceCompareTable } from "@/components/market/price-compare-table";
 import { PriceHistoryPanel } from "@/components/market/price-history-panel";
 import { PageHeader } from "@/components/shared/page-header";
 import { en } from "@/i18n/en";
@@ -43,6 +44,14 @@ export default function OfficerPricesPage() {
             actor={{ uid: user.uid, name: profile.full_name, role: "officer" }}
             restrictToCenterIds={assignedCenterIds}
           />
+
+          <section aria-labelledby="price-compare-heading">
+            <h2 id="price-compare-heading" className="mb-3 text-sm font-semibold tracking-wide text-muted-foreground uppercase">
+              {en.market.compareTableHeading}
+            </h2>
+            <p className="mb-3 text-sm text-muted-foreground">{en.market.compareTableDescription}</p>
+            <PriceCompareTable restrictToCenterIds={assignedCenterIds} />
+          </section>
 
           <section aria-labelledby="price-history-heading">
             <h2 id="price-history-heading" className="mb-3 text-sm font-semibold tracking-wide text-muted-foreground uppercase">
